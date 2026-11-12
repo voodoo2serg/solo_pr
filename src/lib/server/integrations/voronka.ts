@@ -31,9 +31,12 @@ function ensureLeadSyncColumns(){
 ensureLeadSyncColumns();
 
 export function leadCreatedPayload(lead:LeadRow){
+ // Dual-emit type+kind and idempotency_key+event_id for voronka dual-compat.
  return {
   type:'lead.created',
+  kind:'lead.created',
   idempotency_key:lead.id,
+  event_id:lead.id,
   source:'solo_pr',
   data:{
    id:lead.id,
@@ -63,14 +66,24 @@ async function deliver(url:string,secret:string,payload:unknown){
  const body=canonicalJson(payload);
  const timestamp=String(Date.now());
  const signature=signPayload(secret,body,timestamp);
+ const eventType=(payload as {type?:string;kind?:string}).type
+  ||(payload as {kind?:string}).kind
+  ||'event';
+ const idem=(payload as {idempotency_key?:string;event_id?:string}).idempotency_key
+  ||(payload as {event_id?:string}).event_id
+  ||'';
+ const sigHeader='sha256='+signature;
+ // Emit peer-preferred x-solo-* and voronka alias x-voronka-* (same timestamp/sig).
  const res=await fetch(url,{
   method:'POST',
   headers:{
    'content-type':'application/json',
    'x-solo-timestamp':timestamp,
-   'x-solo-signature':'sha256='+signature,
-   'x-solo-event':(payload as {type?:string}).type||'event',
-   'idempotency-key':(payload as {idempotency_key?:string}).idempotency_key||'',
+   'x-solo-signature':sigHeader,
+   'x-solo-event':eventType,
+   'x-voronka-timestamp':timestamp,
+   'x-voronka-signature':sigHeader,
+   'idempotency-key':idem,
   },
   body,
   signal:AbortSignal.timeout(12_000),
@@ -139,6 +152,41 @@ export type AccessEvent={
  club?:boolean;
  name?:string;
 };
+
+const ACCESS_TYPES=new Set(['deal.paid','access.granted','access.revoked']);
+
+/** Dual-read inbound envelope: type|kind, event_id|idempotency_key, nested data|flat. */
+export function normalizeAccessEvent(raw:Record<string,unknown>):AccessEvent{
+ const nested=(raw.data&&typeof raw.data==='object'&&!Array.isArray(raw.data))
+  ?(raw.data as Record<string,unknown>)
+  :null;
+ const pick=(...keys:string[]):unknown=>{
+  for(const k of keys){
+   if(raw[k]!==undefined&&raw[k]!==null&&raw[k]!=='')return raw[k];
+   if(nested&&nested[k]!==undefined&&nested[k]!==null&&nested[k]!=='')return nested[k];
+  }
+  return undefined;
+ };
+ const typeRaw=String(pick('type','kind')||'');
+ const eventId=String(pick('event_id','idempotency_key')||'');
+ if(!eventId||!ACCESS_TYPES.has(typeRaw)){
+  throw new Error('event_id|idempotency_key and type|kind (deal.paid|access.granted|access.revoked) required');
+ }
+ const email=pick('email');
+ const externalId=pick('external_id');
+ const courseId=pick('course_id','commerce_product_id');
+ const clubVal=pick('club');
+ const name=pick('name');
+ return {
+  event_id:eventId,
+  type:typeRaw as AccessEvent['type'],
+  email:email!=null?String(email):undefined,
+  external_id:externalId!=null?String(externalId):undefined,
+  course_id:courseId!=null?String(courseId):undefined,
+  club:typeof clubVal==='boolean'?clubVal:clubVal==null?undefined:Boolean(clubVal),
+  name:name!=null?String(name):undefined,
+ };
+}
 
 type AccessUser={id:string;external_id?:string|null};
 function findOrCreateUser(ev:AccessEvent):AccessUser|null{
