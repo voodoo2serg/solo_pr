@@ -10,6 +10,7 @@ import {
  logoutUrl,oidcConfigPublic,outboxStats,pingLms,pingVoronka,processOutbox,queueLeadSync,sanitizeRedirect,setSetting,takeOidcState,upsertOidcUser,
 } from '@/lib/server/integrations';
 import {addExternalDocument,documentStorageMeta,storeLocalDocument} from '@/lib/server/documents';
+import {mediaStorageMeta,readCmsMedia,storeCmsImage} from '@/lib/server/media';
 import {auditAccess,deleteOrAnonymizeSubject,exportSubject,retentionSweep} from '@/lib/server/privacy';
 import {bumpMetric,logJson,newRequestId} from '@/lib/server/observability';
 
@@ -45,6 +46,12 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{path:string[
  if(route==='me')return json({user:user?publicUser(user):null});
  if(route==='auth/oidc')return json(oidcConfigPublic());
  if(route==='avatar'){if(!user?.avatar)return error('Фото не найдено',404);return new NextResponse(new Uint8Array(user.avatar),{headers:{'Content-Type':'image/webp','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}
+ if(route.startsWith('media/')){
+  const file=route.slice(6);
+  const bytes=readCmsMedia(file);
+  if(!bytes)return error('Файл не найден',404);
+  return new NextResponse(new Uint8Array(bytes),{headers:{'Content-Type':'image/webp','Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'}});
+ }
  if(route.startsWith('materials/')){const m=c.materials.find(m=>m.published!==false&&m.id===route.slice(10));if(!m)return error('Материал не найден',404);if(m.access==='club'&&!user?.club&&user?.role!=='admin')return error('Материал доступен участникам клуба',403);return json({material:m});}
  if(route==='auth/oidc/start'){
   try{const startedOidc=beginOidcLogin(String(req.nextUrl.searchParams.get('redirect')||'/account'));return json(startedOidc);}
@@ -97,6 +104,7 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{path:string[
    integrations:integrationStatusPublic(),
    outbox:outboxStats(),
    documentsMeta:documentStorageMeta,
+   mediaMeta:mediaStorageMeta,
   });
  }
  if(route==='admin/integrations'){
@@ -122,8 +130,8 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{path:string
  // All browser writes must originate from the same origin. M2M uses /api/integrations/*.
  const origin=req.headers.get('origin');let originAllowed=false;try{const parsed=new URL(origin||'');originAllowed=['http:','https:'].includes(parsed.protocol)&&(process.env.SITE_ORIGIN?parsed.origin===process.env.SITE_ORIGIN:parsed.origin===new URL(req.url).origin||parsed.host===req.headers.get('host'));}catch{}if(!originAllowed)return error('Недопустимый источник запроса',403);
  const route=(await params).path.join('/');const token=req.cookies.get(COOKIE)?.value;const user=sessionUser(token);
- if(Number(req.headers.get('content-length')||0)>3_000_000)return error('Слишком большой запрос',413);
- let b:Record<string,unknown>;try{const raw=await req.text();if(Buffer.byteLength(raw)>3_000_000)return error('Слишком большой запрос',413);b=JSON.parse(raw);if(!b||Array.isArray(b)||typeof b!=='object')return error('Некорректный запрос');}catch{return error('Некорректный запрос');}
+ if(Number(req.headers.get('content-length')||0)>4_500_000)return error('Слишком большой запрос',413);
+ let b:Record<string,unknown>;try{const raw=await req.text();if(Buffer.byteLength(raw)>4_500_000)return error('Слишком большой запрос',413);b=JSON.parse(raw);if(!b||Array.isArray(b)||typeof b!=='object')return error('Некорректный запрос');}catch{return error('Некорректный запрос');}
  try{
  if(route==='register'||route==='login'){
   const login=String(b.login||b.email||'').trim().toLowerCase();const pass=String(b.password||'');
@@ -227,6 +235,13 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{path:string
   const invalidPublication=publicationError(c);if(invalidPublication)return error(invalidPublication);
   if(!safeLink(c.brand.telegram)||!safeLink(c.brand.vk)||!safeLink(c.brand.max||''))return error('Контактные ссылки должны начинаться с https://');
   saveContent(c);db.prepare('INSERT INTO audit(actor,action,created) VALUES(?,?,?)').run(user.id,'content.update',new Date().toISOString());return json({ok:true});
+ }
+ if(route==='admin/media'){
+  try{
+   const stored=await storeCmsImage(String(b.data||''));
+   auditAccess(user.id,'media.upload:'+stored.filename);
+   return json({ok:true,media:stored});
+  }catch(e){return error(e instanceof Error?e.message:'Не удалось сохранить изображение');}
  }
  if(route==='admin/purchase'){
   const id=String(b.id),course=String(b.course);

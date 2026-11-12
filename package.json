@@ -12,6 +12,7 @@
     "db:migrate": "node -e \"console.error('Refusing prisma migrate: non-runtime stub. See docs/ARCHITECTURE.md'); process.exit(1)\"",
     "db:reset": "node -e \"console.error('Refusing prisma reset (data-loss). See docs/ARCHITECTURE.md'); process.exit(1)\"",
     "admin": "node scripts/admin.mjs",
+    "seed:admins": "node scripts/seed-admins.mjs",
     "typecheck": "tsc --noEmit",
     "test": "npm run typecheck && npm run test:cms && npm run test:integration && npm run test:integrations",
     "test:integration": "node tests/portal.integration.mjs",
