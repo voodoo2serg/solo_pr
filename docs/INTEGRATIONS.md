@@ -87,8 +87,15 @@ Skew: ±5 минут.
 CMS course fields: `lmsCourseId`, `lmsLaunchUrl`.
 
 - Status: `GET {LMS_BASE_URL}/api/m2m/enrollment?email=&course_id=` (signed).
-- Launch: `POST /api/portal/lms/launch` → one-time ticket URL (no password sharing).
-- Revoke отражается при следующем чтении статуса (SLA = запрос ЛК / dashboard).
+- Launch: `POST /api/portal/lms/launch` → one-time ticket (requires local `purchases`/admin grant).
+- Redeem: `POST /api/integrations/lms/handoff` with LMS HMAC and JSON `{ "ticket": "..." }` → user/course claims; ticket single-use.
+- Revoke отражается при redeem и при чтении статуса ЛК.
+
+## Outbox / retries
+
+- In-process worker: `OUTBOX_POLL_MS` (default 15s), started with integrations module.
+- External cron: `GET|POST /api/cron/outbox` with `Authorization: Bearer $CRON_SECRET` (or loopback without secret).
+- Admin flush still available; retries do **not** depend on new leads.
 
 ## SPO-4 OIDC
 

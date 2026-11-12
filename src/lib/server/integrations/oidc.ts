@@ -1,5 +1,6 @@
 import 'server-only';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
+import {createRemoteJWKSet,jwtVerify} from 'jose';
 import {db} from '../store';
 import {integrationEnv,isIntegrationEnabled} from './config';
 
@@ -28,6 +29,15 @@ export function oidcConfigPublic(){
 
 function b64url(buf:Buffer){return buf.toString('base64url');}
 
+function issuerBase(){
+ return integrationEnv().oidcIssuer.replace(/\/$/,'');
+}
+
+function jwksUrl(){
+ // Keycloak standard; discovery can override later via .well-known if needed.
+ return new URL(issuerBase()+'/protocol/openid-connect/certs');
+}
+
 export function beginOidcLogin(redirectAfter='/account'){
  if(!isIntegrationEnabled('oidc'))throw new Error('OIDC выключен');
  const env=integrationEnv();
@@ -36,11 +46,11 @@ export function beginOidcLogin(redirectAfter='/account'){
  const nonce=b64url(randomBytes(24));
  const codeVerifier=b64url(randomBytes(32));
  const challenge=b64url(createHash('sha256').update(codeVerifier).digest());
+ const redirect=sanitizeRedirect(redirectAfter);
  db.prepare('DELETE FROM oidc_states WHERE expires<?').run(Date.now());
  db.prepare('INSERT INTO oidc_states(state,nonce,code_verifier,redirect,expires) VALUES(?,?,?,?,?)')
-  .run(state,nonce,codeVerifier,redirectAfter,Date.now()+10*60*1000);
- const auth=new URL(env.oidcIssuer.replace(/\/$/,'')+'/protocol/openid-connect/auth');
- // Keycloak-style path; generic OIDC issuers may use /.well-known/openid-configuration discovery later.
+  .run(state,nonce,codeVerifier,redirect,Date.now()+10*60*1000);
+ const auth=new URL(issuerBase()+'/protocol/openid-connect/auth');
  auth.searchParams.set('client_id',env.oidcClientId);
  auth.searchParams.set('redirect_uri',env.oidcRedirectUri);
  auth.searchParams.set('response_type','code');
@@ -50,6 +60,12 @@ export function beginOidcLogin(redirectAfter='/account'){
  auth.searchParams.set('code_challenge',challenge);
  auth.searchParams.set('code_challenge_method','S256');
  return {url:auth.toString(),state};
+}
+
+export function sanitizeRedirect(path:string){
+ if(!path||!path.startsWith('/')||path.startsWith('//')||path.includes('\\'))return '/account';
+ if(path.length>300)return '/account';
+ return path;
 }
 
 export function takeOidcState(state:string){
@@ -62,7 +78,7 @@ export function takeOidcState(state:string){
 
 export async function exchangeOidcCode(code:string,stateRow:{nonce:string;code_verifier:string}){
  const env=integrationEnv();
- const tokenUrl=env.oidcIssuer.replace(/\/$/,'')+'/protocol/openid-connect/token';
+ const tokenUrl=issuerBase()+'/protocol/openid-connect/token';
  const body=new URLSearchParams({
   grant_type:'authorization_code',
   code,
@@ -75,8 +91,7 @@ export async function exchangeOidcCode(code:string,stateRow:{nonce:string;code_v
  if(!res.ok)throw new Error('OIDC token exchange failed: HTTP '+res.status);
  const tokens=await res.json() as {id_token?:string;access_token?:string};
  if(!tokens.id_token)throw new Error('OIDC id_token missing');
- const payload=decodeJwt(tokens.id_token);
- if(payload.nonce&&payload.nonce!==stateRow.nonce)throw new Error('OIDC nonce mismatch');
+ const payload=await verifyIdToken(tokens.id_token,stateRow.nonce);
  return {
   sub:String(payload.sub||''),
   email:String(payload.email||'').toLowerCase(),
@@ -85,16 +100,25 @@ export async function exchangeOidcCode(code:string,stateRow:{nonce:string;code_v
  };
 }
 
-function decodeJwt(token:string){
- const part=token.split('.')[1];
- if(!part)return {};
- return JSON.parse(Buffer.from(part,'base64url').toString('utf8')) as Record<string,unknown>;
+/** Cryptographic ID token verification: JWKS signature + iss/aud/exp + nonce. */
+export async function verifyIdToken(idToken:string,expectedNonce:string){
+ const env=integrationEnv();
+ const issuer=issuerBase();
+ const JWKS=createRemoteJWKSet(jwksUrl());
+ const {payload}=await jwtVerify(idToken,JWKS,{
+  issuer,
+  audience:env.oidcClientId,
+  clockTolerance:60,
+ });
+ if(!payload.sub)throw new Error('OIDC sub missing');
+ if(String(payload.nonce||'')!==expectedNonce)throw new Error('OIDC nonce mismatch');
+ return payload as Record<string,unknown>;
 }
 
 export function logoutUrl(idTokenHint?:string){
  const env=integrationEnv();
  if(!isIntegrationEnabled('oidc')||!env.oidcIssuer)return null;
- const u=new URL(env.oidcIssuer.replace(/\/$/,'')+'/protocol/openid-connect/logout');
+ const u=new URL(issuerBase()+'/protocol/openid-connect/logout');
  if(env.oidcClientId)u.searchParams.set('client_id',env.oidcClientId);
  if(idTokenHint)u.searchParams.set('id_token_hint',idTokenHint);
  if(process.env.SITE_ORIGIN)u.searchParams.set('post_logout_redirect_uri',process.env.SITE_ORIGIN);

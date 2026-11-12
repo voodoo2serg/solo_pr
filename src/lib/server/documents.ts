@@ -1,6 +1,6 @@
 import 'server-only';
 import {createHmac,timingSafeEqual,randomUUID} from 'node:crypto';
-import {mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
+import {mkdirSync,writeFileSync,readFileSync,existsSync,unlinkSync,rmSync} from 'node:fs';
 import path from 'node:path';
 import {db} from './store';
 import {integrationEnv} from './integrations/config';
@@ -85,6 +85,21 @@ export function verifyDownloadToken(token:string,docId:string,userId:string){
   const b=Buffer.from(sig||'');
   return a.length===b.length&&timingSafeEqual(a,b);
  }catch{return false;}
+}
+
+export function unlinkLocalDocumentFiles(userId:string){
+ const rows=db.prepare("SELECT object_key,storage FROM documents WHERE user_id=? AND storage='local' AND object_key!=''").all(userId) as {object_key:string;storage:string}[];
+ let removed=0;
+ for(const row of rows){
+  if(!row.object_key||row.object_key.includes('..'))continue;
+  const full=path.join(docsDir,row.object_key);
+  try{
+   if(existsSync(full)){unlinkSync(full);removed++;}
+  }catch{/* best-effort unlink before DB delete */}
+ }
+ // Remove empty user directory if present.
+ try{rmSync(path.join(docsDir,userId),{recursive:false});}catch{/* non-empty or missing */}
+ return removed;
 }
 
 export const documentStorageMeta={

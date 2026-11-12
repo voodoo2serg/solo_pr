@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {DatabaseSync} from 'node:sqlite';
-const temp=mkdtempSync(path.join(tmpdir(),'solo-pr-test-'));process.env.DATA_DIR=temp;process.env.COOKIE_SECURE='false';
+const temp=mkdtempSync(path.join(tmpdir(),'solo-pr-test-'));process.env.DATA_DIR=temp;process.env.COOKIE_SECURE='false';process.env.OUTBOX_WORKER='false';
 const require=createRequire(import.meta.url);const {NextRequest}=require('next/server');
 try{
  const {routeModule}=require('../.next/server/app/api/portal/[...path]/route.js');await routeModule.ensureUserland();const {GET,POST}=routeModule.userland;

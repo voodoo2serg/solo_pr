@@ -3,6 +3,7 @@ import {db} from './store';
 import {canonicalJson,signPayload} from './integrations/signing';
 import {integrationEnv,isIntegrationEnabled} from './integrations/config';
 import {notifyLmsSubjectEvent} from './integrations/lms';
+import {unlinkLocalDocumentFiles} from './documents';
 
 export function auditAccess(actor:string,action:string){
  db.prepare('INSERT INTO audit(actor,action,created) VALUES(?,?,?)').run(actor,action,new Date().toISOString());
@@ -50,6 +51,7 @@ export async function deleteOrAnonymizeSubject(userId:string,actor:string){
  const user=db.prepare('SELECT id,email,external_id FROM users WHERE id=?').get(userId) as {id:string;email:string;external_id?:string}|undefined;
  if(!user)return null;
  const snapshot={user_id:user.id,email:user.email,external_id:user.external_id||null};
+ const filesRemoved=unlinkLocalDocumentFiles(userId);
  // Cascade via FK for sessions/saved/attendance/requests/purchases/documents.
  db.prepare('DELETE FROM sessions WHERE user_id=?').run(userId);
  db.prepare('DELETE FROM saved WHERE user_id=?').run(userId);
@@ -63,7 +65,7 @@ export async function deleteOrAnonymizeSubject(userId:string,actor:string){
  auditAccess(actor,'subject.delete:'+userId);
  const voronka=await notifyVoronkaPrivacy('subject.delete',snapshot);
  const lms=await notifyLmsSubjectEvent('subject.delete',snapshot);
- return {ok:true,notified:{voronka,lms}};
+ return {ok:true,files_removed:filesRemoved,notified:{voronka,lms}};
 }
 
 /** Retention: legal says form data ≤3y; document the job trigger. */

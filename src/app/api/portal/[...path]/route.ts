@@ -7,7 +7,7 @@ import {db,content,saveContent,publicUser,sessionUser,hashPassword,verifyPasswor
 import type {CommunityContent} from '@/lib/content-types';
 import {
  beginOidcLogin,createLmsHandoff,exchangeOidcCode,fetchCrmSnapshot,fetchLmsStatuses,integrationStatusPublic,
- logoutUrl,oidcConfigPublic,outboxStats,pingLms,pingVoronka,processOutbox,queueLeadSync,setSetting,takeOidcState,upsertOidcUser,
+ logoutUrl,oidcConfigPublic,outboxStats,pingLms,pingVoronka,processOutbox,queueLeadSync,sanitizeRedirect,setSetting,takeOidcState,upsertOidcUser,
 } from '@/lib/server/integrations';
 import {addExternalDocument,documentStorageMeta,storeLocalDocument} from '@/lib/server/documents';
 import {auditAccess,deleteOrAnonymizeSubject,exportSubject,retentionSweep} from '@/lib/server/privacy';
@@ -23,7 +23,18 @@ const emailOK=(s:string)=>s.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 const loginOK=(s:string)=>/^[a-z0-9_.-]{3,40}$/.test(s);
 function safeLink(s:string){if(!s)return true;try{return new URL(s).protocol==='https:';}catch{return false;}}
 function cookieOptions(){return {httpOnly:true,secure:process.env.COOKIE_SECURE==='true'||(process.env.NODE_ENV==='production'&&process.env.COOKIE_SECURE!=='false'),sameSite:'lax' as const,path:'/',maxAge:TTL/1000};}
-function startSession(u:User){const token=randomBytes(32).toString('base64url');db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(tokenHash(token),u.id,Date.now()+TTL);const res=json({user:publicUser(u)});res.cookies.set(COOKIE,token,cookieOptions());return res;}
+function issueSessionToken(u:User){const token=randomBytes(32).toString('base64url');db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(tokenHash(token),u.id,Date.now()+TTL);return token;}
+function startSession(u:User){const token=issueSessionToken(u);const res=json({user:publicUser(u)});res.cookies.set(COOKIE,token,cookieOptions());return res;}
+/** SPA uses hash routes; after OIDC set session cookie and redirect to /#/<path>. */
+function redirectWithSession(u:User,destination:string,req:NextRequest){
+ const token=issueSessionToken(u);
+ const dest=sanitizeRedirect(destination);
+ const origin=(process.env.SITE_ORIGIN||req.nextUrl.origin).replace(/\/$/,'');
+ const path=dest.replace(/^\//,'').replace(/^#\/?/,'');
+ const out=NextResponse.redirect(origin+'/#/'+(path||'account'));
+ out.cookies.set(COOKIE,token,cookieOptions());
+ return out;
+}
 
 export async function GET(req:NextRequest,{params}:{params:Promise<{path:string[]}>}){
  const requestId=newRequestId();
@@ -48,7 +59,7 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{path:string[
    const identity=await exchangeOidcCode(code,stateRow);
    const userId=upsertOidcUser(identity);
    const u=db.prepare('SELECT * FROM users WHERE id=?').get(userId) as User;
-   return startSession(u);
+   return redirectWithSession(u,stateRow.redirect||'/account',req);
   }catch(e){bumpMetric('auth_failures');return error(e instanceof Error?e.message:'OIDC ошибка',401);}
  }
  if(!user)return error('Войдите в аккаунт',401);

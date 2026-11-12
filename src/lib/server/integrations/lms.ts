@@ -109,8 +109,17 @@ export async function fetchLmsStatuses(user:{id:string;email:string},purchasedCo
  return out;
 }
 
+function userHasCourseAccess(userId:string,courseId:string){
+ const purchase=db.prepare('SELECT 1 AS ok FROM purchases WHERE user_id=? AND course_id=?').get(userId,courseId) as {ok:number}|undefined;
+ if(purchase)return true;
+ const user=db.prepare('SELECT role FROM users WHERE id=?').get(userId) as {role:string}|undefined;
+ return user?.role==='admin';
+}
+
 /** Create one-time SSO handoff ticket for LMS launch (no password sharing). */
 export function createLmsHandoff(userId:string,courseId:string){
+ if(!courseId)throw new Error('courseId required');
+ if(!userHasCourseAccess(userId,courseId))throw new Error('Нет доступа к курсу');
  const binding=courseBindings().find(b=>b.courseId===courseId);
  if(!binding?.lmsCourseId)throw new Error('Курс не связан с LMS');
  const code=oneTimeCode();
@@ -121,14 +130,31 @@ export function createLmsHandoff(userId:string,courseId:string){
  const base=(binding.launchUrl||(env.lmsBaseUrl?env.lmsBaseUrl.replace(/\/$/,'')+'/launch':''));
  if(!base)throw new Error('Нет launch URL для курса');
  const url=base+(base.includes('?')?'&':'?')+'ticket='+encodeURIComponent(code)+'&course='+encodeURIComponent(binding.lmsCourseId);
- return {url,expires_at:new Date(expires).toISOString()};
+ return {url,expires_at:new Date(expires).toISOString(),ticket:code};
 }
 
 export function consumeHandoff(code:string){
- const row=db.prepare('SELECT * FROM lms_handoff WHERE code=?').get(code) as {user_id:string;lms_course_id:string;expires:number;used:number}|undefined;
+ const row=db.prepare('SELECT * FROM lms_handoff WHERE code=?').get(code) as
+  {code:string;user_id:string;course_id:string;lms_course_id:string;expires:number;used:number}|undefined;
  if(!row||row.used||row.expires<Date.now())return null;
+ // Re-check grant at redeem time (revokes must stick).
+ if(!userHasCourseAccess(row.user_id,row.course_id)){
+  db.prepare('UPDATE lms_handoff SET used=1 WHERE code=?').run(code);
+  return null;
+ }
  db.prepare('UPDATE lms_handoff SET used=1 WHERE code=?').run(code);
- return row;
+ const user=db.prepare('SELECT id,email,name,external_id FROM users WHERE id=?').get(row.user_id) as
+  {id:string;email:string;name:string;external_id?:string}|undefined;
+ if(!user)return null;
+ return {
+  ticket:row.code,
+  user_id:user.id,
+  email:user.email,
+  name:user.name,
+  external_id:user.external_id||null,
+  course_id:row.course_id,
+  lms_course_id:row.lms_course_id,
+ };
 }
 
 export async function pingLms(){
