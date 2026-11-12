@@ -344,3 +344,5 @@ html:not(.dark),html:not(.dark) body{background:#ffffff}
 html:not(.dark) .learning-band,html:not(.dark) .library-section{background:#ffffff}
 h1,h2,h3,h4,.ideas-feed h2,.feed-article h3,.video-empty h3{font-family:'Unbounded Variable',sans-serif;font-style:normal}
 h1,h2,h3,h4{text-decoration:none}
+
+.dark{--background:#191a1d;--surface:#232428;--card:#232428}
