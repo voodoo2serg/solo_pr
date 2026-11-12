@@ -1,13 +1,7 @@
-import { PrismaClient } from '@prisma/client'
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: ['query'],
-  })
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+/**
+ * NON-RUNTIME stub.
+ * Prisma client is not used by the VPS portal (SQLite via src/lib/server/store.ts).
+ * Kept only so accidental imports fail loudly instead of talking to a wrong schema.
+ * See docs/ARCHITECTURE.md.
+ */
+throw new Error('src/lib/db.ts is non-runtime Prisma stub; use @/lib/server/store');

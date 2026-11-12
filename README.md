@@ -19,13 +19,13 @@
 
 Белый фон, локально поставляемые шрифты Golos Text и Unbounded, кирпичные акценты и пастельные плашки. Логотип извлечён из предоставленного владельцем PDF как вектор. Горная иллюстрация создана для проекта. Визуальные источники: site_sv и site_pr; исходные репозитории не изменялись.
 
-## Технологии и два варианта размещения
+## Технологии и размещение
 
-**VPS:** Node.js 24, Next.js 16, React 19, SQLite и JSON-файл текстов. Сайт собирается через `npm run build:vps`; Dockerfile использует именно эту команду.
+**Production ПДн (единственный путь):** российский VPS / официальное облако РФ — Node.js 24, Next.js 16, React 19, SQLite + JSON. Сборка: `npm run build:vps` (Dockerfile). Интеграции с voronka/lms_end — подписанные webhook/API, без shared DB. Документы: [docs/VPS.md](docs/VPS.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
 
-**Sites:** статическая клиентская сборка Next.js и Worker с Cloudflare D1. Команда `npm run build` создаёт `dist/client` и `dist/server`. Исходники Worker и миграций сохранены, но привязка к приватному размещению Sites в этот репозиторий не включена.
+**Sites / Cloudflare Worker + D1:** только non-PII demo / legacy (`npm run build`). **Не** использовать для реальных персональных данных (152‑ФЗ). Auto-elevate админа по platform header выключен по умолчанию (`SITES_ADMIN_ELEVATE`).
 
-Базы VPS и Sites независимы. Миграция аккаунтов и паролей между ними не выполняется автоматически. На VPS пароли хешируются scrypt, в Worker — PBKDF2-SHA256. Данные пользователей не хранятся в репозитории.
+Базы VPS и Sites независимы. На VPS пароли — scrypt; в Worker — PBKDF2-SHA256.
 
 ## Развёртывание на VPS
 
@@ -70,12 +70,13 @@ npm run dev
 
 ```bash
 npm run typecheck
-npm run test:worker
+npm run test:cms
 npm run build:vps
 npm run test:integration
+npm run test:integrations
 ```
 
-Интеграционные тесты используют отдельные временные базы, проверяют авторизацию, изоляцию кабинетов, закрытые материалы, редактор, документы и заявки. Рабочие пользовательские данные не затрагиваются.
+CI на PR запускает typecheck, CMS-тесты, VPS-сборку и интеграционные/контрактные тесты. Рабочие пользовательские данные не затрагиваются.
 
 ## Данные и права
 

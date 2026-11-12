@@ -1,3 +1,5 @@
+// NON-RUNTIME stub — not used by the VPS portal (see docs/ARCHITECTURE.md).
+// Real schema lives in src/lib/server/store.ts (node:sqlite).
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
