@@ -33,7 +33,19 @@ const route=url.pathname.slice('/api/portal/'.length);const token=req.headers.ge
 let user=token?await first('SELECT u.* FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.token=? AND s.expires>?',await sha(token),Date.now()):null;
 const c=await getContent();
 async function rate(key:string,max:number,minutes:number){const now=Date.now();await run('DELETE FROM limits WHERE key=? AND expires<?',key,now);const row=await first('INSERT INTO limits(key,count,expires) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count',key,now+minutes*60000);return row.count<=max;}
-async function session(u:any){const verified=req.headers.get('oai-authenticated-user-email')?.toLowerCase();if(env.ADMIN_EMAIL&&verified===env.ADMIN_EMAIL.toLowerCase()&&u.email===verified){await run("UPDATE users SET role='admin',club=1 WHERE id=?",u.id);u={...u,role:'admin',club:1};}const t=hex(crypto.getRandomValues(new Uint8Array(32)));await run('INSERT INTO sessions(token,user_id,expires) VALUES(?,?,?)',await sha(t),u.id,Date.now()+TTL);return json({user:pub(u)},200,{'Set-Cookie':COOKIE+'='+t+'; HttpOnly; SameSite=Lax; Path=/; Max-Age='+TTL/1000+(url.protocol==='https:'?'; Secure':'')});}
+async function session(u:any){
+ // SPO-12: platform header admin elevate is off by default. Enable only with SITES_ADMIN_ELEVATE=true (non-prod demo).
+ const elevate=String(env.SITES_ADMIN_ELEVATE||'').toLowerCase()==='true'||env.SITES_ADMIN_ELEVATE===true||env.SITES_ADMIN_ELEVATE===1;
+ const verified=req.headers.get('oai-authenticated-user-email')?.toLowerCase();
+ if(elevate&&env.ADMIN_EMAIL&&verified===env.ADMIN_EMAIL.toLowerCase()&&u.email===verified){
+  await run("UPDATE users SET role='admin',club=1 WHERE id=?",u.id);
+  u={...u,role:'admin',club:1};
+  await run('INSERT INTO audit(actor,action,created) VALUES(?,?,?)',u.id,'sites.admin_elevate',new Date().toISOString()).catch(()=>{});
+ }
+ const t=hex(crypto.getRandomValues(new Uint8Array(32)));
+ await run('INSERT INTO sessions(token,user_id,expires) VALUES(?,?,?)',await sha(t),u.id,Date.now()+TTL);
+ return json({user:pub(u)},200,{'Set-Cookie':COOKIE+'='+t+'; HttpOnly; SameSite=Lax; Path=/; Max-Age='+TTL/1000+(url.protocol==='https:'?'; Secure':'')});
+}
 if(req.method==='GET'){
  if(route==='content')return json({...c,videos:(c.videos||[]).filter((v:any)=>v.published!==false),courses:c.courses.filter((v:any)=>v.published!==false),materials:c.materials.filter((v:any)=>v.published!==false).map(({body,...m}:any)=>m),events:user?c.events.map(({roomUrl,recordingUrl,...e}:any)=>e):[]});
  if(route==='me')return json({user:user?pub(user):null});

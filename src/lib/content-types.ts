@@ -1,7 +1,7 @@
 export type PublicationOptions={published?:boolean;showOnHome?:boolean;publishedAt?:string;};
 export type ModuleSettings={order:'manual'|'latest'|'oldest';limit:number;};
 export type Video=PublicationOptions&{id:string;title:string;description:string;url:string;image:string;};
-export type Course=PublicationOptions&{startDate?:string;id:string;title:string;description:string;image:string;dateLabel:string;status:'planned'|'active'|'completed';format:string;topics:string[];};
+export type Course=PublicationOptions&{startDate?:string;id:string;title:string;description:string;image:string;dateLabel:string;status:'planned'|'active'|'completed';format:string;topics:string[];lmsCourseId?:string;lmsLaunchUrl?:string;};
 export type Material = PublicationOptions&{ id:string; title:string; description:string; category:string; access:'open'|'club'; minutes:string; body:string; };
 export type CommunityEvent = { id:string; title:string; description:string; start:string; end:string; format:string; access:'open'|'club'; roomUrl:string; recordingUrl:string; };
 export type PageContent = { eyebrow:string; title:string; intro:string; quote?:string; sections:{title:string; text:string}[]; };

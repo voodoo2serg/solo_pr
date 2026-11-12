@@ -1,6 +1,20 @@
-# Развёртывание Соло-PR на VPS
+# Развёртывание Соло-PR на VPS (production ПДн)
 
-Инструкция рассчитана на Linux-сервер с установленными Git, Docker Engine и Docker Compose v2. Node.js на хосте для контейнерного запуска не нужен: используется образ Node.js 24.
+**Production персональные данные — только российский VPS / официальное облако РФ (152‑ФЗ).**  
+Cloudflare Sites / Workers / D1 в этом репозитории — **non-PII demo**, не production-путь. См. [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+Инструкция рассчитана на Linux-сервер у RU-провайдера (Yandex Cloud / VK Cloud / Selectel / Timeweb — выбор владельца) с Git, Docker Engine и Docker Compose v2. Node.js на хосте для контейнерного запуска не нужен: используется образ Node.js 24.
+
+## Checklist перед продакшеном
+
+- [ ] DNS A/AAAA на IP VM в выбранном регионе РФ
+- [ ] HTTPS (Caddy/nginx) на 80/443; приложение только на `127.0.0.1:3000`
+- [ ] `COOKIE_SECURE=true`, `SITE_ORIGIN=https://ваш-домен`
+- [ ] `DATA_DIR` на volume с правами `0700`, бэкап вне сервера
+- [ ] Readiness: `GET /api/ready` (Compose healthcheck уже настроен)
+- [ ] Firewall: снаружи только 80/443; SSH ограничен
+- [ ] Заполнены `PD_HOST_PROVIDER` / `PD_HOST_REGION` и сверены legal-тексты
+- [ ] Секреты интеграций (`VORONKA_*`, `LMS_*`, `OIDC_*`) только в env/secret store
 
 ## 1. Подготовьте домен и каталог
 
@@ -127,6 +141,17 @@ npm run build:vps
 
 Запускайте `npm start` через systemd или другой менеджер процессов от отдельного непривилегированного пользователя. Задайте постоянный `DATA_DIR`, `NODE_ENV=production`, `COOKIE_SECURE=true`. HTTPS-прокси должен быть настроен так же, как выше. При запуске без контейнера ограничьте доступ к порту 3000 брандмауэром.
 
+## Логи и метрики
+
+- Health: `GET /api/health` (или `/api`) — `ok`, версия, SQLite readable.
+- Readiness: `GET /api/ready`.
+- Приложение пишет JSON-логи в stdout (Docker/`journald`). Направьте их в сборщик **в том же RU-регионе** (например, managed logging провайдера VPS). Не отправляйте ПДн-логи на иностранные SaaS без отдельной оценки 152‑ФЗ.
+- Счётчики: 5xx, auth failures, lead sync failures (см. поле `metrics` в health).
+
+## Документы ЛК
+
+Файлы по умолчанию хранятся в `$DATA_DIR/documents` на том же RU volume (object key в БД). Внешние HTTPS URL — только при `DOCUMENT_URL_ALLOWLIST`. Скачивание: `/api/documents/:id` с `Cache-Control: private`.
+
 ## Отличие от Sites
 
-Для VPS используйте `npm run build:vps`, а не `npm run build`. Последняя команда создаёт Worker/D1-сборку для отдельной платформы. Хранилище VPS не использует Cloudflare D1. Перенос пользователей, хешей паролей, покупок и CMS-данных из Sites требует отдельной процедуры.
+Для production используйте `npm run build:vps`, а не `npm run build`. Последняя команда создаёт Worker/D1-сборку **только для non-PII demo**. Хранилище VPS не использует Cloudflare D1. `SITES_ADMIN_ELEVATE` на VPS отсутствует и должен оставаться выключенным в Sites. Перенос пользователей из Sites не поддерживается.

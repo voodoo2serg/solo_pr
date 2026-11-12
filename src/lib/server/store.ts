@@ -32,8 +32,18 @@ export function content():CommunityContent {if(!existsSync(file)){writeFileSync(
 if(!current.designRevision){current.home=seed.home;current.pages=seed.pages;current.courses=seed.courses;current.brand.name='Соло-PR';current.designRevision=2;saveContent(current);}
 const branded=withPresentation(withBranding(current));if(branded!==current)saveContent(branded);return withCmsDefaults(branded);}
 export function saveContent(next:CommunityContent){const tmp=file+'.'+randomBytes(6).toString('hex')+'.tmp';writeFileSync(tmp,JSON.stringify(next,null,2),{mode:0o600});renameSync(tmp,file);}
-export type User={id:string;email:string;username:string;name:string;about:string;password:string;role:string;club:number;theme:string;avatar:Uint8Array|null;created:string};
-export function publicUser(u:User){return {id:u.id,email:u.email,username:u.username,name:u.name,about:u.about,role:u.role,club:!!u.club,theme:u.theme,hasAvatar:!!u.avatar};}
+export type User={id:string;email:string;username:string;name:string;about:string;password:string;role:string;club:number;theme:string;avatar:Uint8Array|null;created:string;external_id?:string|null;oidc_sub?:string|null;club_source?:string};
+export function publicUser(u:User){return {id:u.id,email:u.email,username:u.username,name:u.name,about:u.about,role:u.role,club:!!u.club,theme:u.theme,hasAvatar:!!u.avatar,externalId:u.external_id||null,hasOidc:!!u.oidc_sub};}
+const userCols=db.prepare('PRAGMA table_info(users)').all() as {name:string}[];
+if(!userCols.some(c=>c.name==='external_id'))db.exec('ALTER TABLE users ADD COLUMN external_id TEXT');
+if(!userCols.some(c=>c.name==='oidc_sub'))db.exec('ALTER TABLE users ADD COLUMN oidc_sub TEXT');
+if(!userCols.some(c=>c.name==='club_source'))db.exec("ALTER TABLE users ADD COLUMN club_source TEXT NOT NULL DEFAULT 'manual'");
+const purchaseCols=db.prepare('PRAGMA table_info(purchases)').all() as {name:string}[];
+if(!purchaseCols.some(c=>c.name==='source'))db.exec("ALTER TABLE purchases ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
+if(!purchaseCols.some(c=>c.name==='event_id'))db.exec('ALTER TABLE purchases ADD COLUMN event_id TEXT');
+const docCols=db.prepare('PRAGMA table_info(documents)').all() as {name:string}[];
+if(!docCols.some(c=>c.name==='object_key'))db.exec("ALTER TABLE documents ADD COLUMN object_key TEXT NOT NULL DEFAULT ''");
+if(!docCols.some(c=>c.name==='storage'))db.exec("ALTER TABLE documents ADD COLUMN storage TEXT NOT NULL DEFAULT 'external'");
 const scrypt=promisify(scryptCallback);
 export async function hashPassword(password:string){const salt=randomBytes(16).toString('hex');const key=await scrypt(password,salt,64) as Buffer;return salt+':'+key.toString('hex');}
 export async function verifyPassword(password:string,encoded:string){const [salt,hex]=encoded.split(':');if(!salt||!hex)return false;const key=await scrypt(password,salt,64) as Buffer;const expected=Buffer.from(hex,'hex');return key.length===expected.length&&timingSafeEqual(key,expected);}
