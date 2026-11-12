@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.sites-build/
+dist/
+data/
+.env*
+!.env.example
+backups/
+*.log
