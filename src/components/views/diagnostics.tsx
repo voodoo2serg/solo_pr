@@ -1,4 +1,5 @@
 'use client';
+import SiteText from '@/components/site/SiteText';
 
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
@@ -44,24 +45,18 @@ export default function DiagnosticsView() {
     return (
       <div className="view-enter container-site py-16 sm:py-24">
         <div className="mx-auto max-w-xl">
-          <p className="eyebrow">Экспресс-диагностика</p>
+          <p className="eyebrow"><SiteText value={"Экспресс-диагностика"}/></p>
           <h1 className="serif mt-4 text-[clamp(1.9rem,4vw,2.6rem)] leading-[1.2] text-ink">
-            С чего начать свой маршрут
-          </h1>
+            <SiteText value={"С чего начать свой маршрут"}/></h1>
           <p className="mt-5 text-[16px] leading-[1.8] text-ink-soft">
-            Три вопроса — о том, где вы сейчас, что хочется укрепить и чего хотите. Без правильных
-            ответов, без регистрации и без баллов. В конце — краткая подсказка и
-            рекомендованный маршрут: что смотреть в первую очередь.
-          </p>
+            <SiteText value={"Три вопроса — о том, где вы сейчас, что хочется укрепить и чего хотите. Без правильных ответов, без регистрации и без баллов. В конце — краткая подсказка и рекомендованный маршрут: что смотреть в первую очередь."}/></p>
           <div className="mt-9">
             <button type="button" className="btn btn-brand" onClick={() => setPhase('questions')}>
-              Начать
-              <ArrowRight className="size-4" />
+              <SiteText value={"Начать"}/><ArrowRight className="size-4" />
             </button>
           </div>
           <p className="mt-6 text-[13px] text-ink-soft">
-            Ответы остаются в браузере. Это способ выбрать материал, а не оценка профессионализма.
-          </p>
+            <SiteText value={"Ответы остаются в браузере. Это способ выбрать материал, а не оценка профессионализма."}/></p>
         </div>
       </div>
     );
@@ -76,15 +71,14 @@ export default function DiagnosticsView() {
         <div className="mx-auto max-w-2xl">
           <div className="flex items-center justify-between">
             <p className="eyebrow">
-              Шаг {step + 1} / {QUESTIONS.length}
+              <SiteText value={"Шаг"}/>{' '}{step + 1} / {QUESTIONS.length}
             </p>
             <button
               type="button"
               className="text-[13px] text-ink-soft transition-colors hover:text-ink"
               onClick={() => (step > 0 ? setStep(step - 1) : setPhase('intro'))}
             >
-              Назад
-            </button>
+              <SiteText value={"Назад"}/></button>
           </div>
           <div className="mt-3 h-px w-full bg-line" role="presentation">
             <div
@@ -93,7 +87,7 @@ export default function DiagnosticsView() {
             />
           </div>
 
-          <h1 className="serif mt-10 text-[clamp(1.8rem,3.8vw,2.4rem)] text-ink">{q.question}</h1>
+          <h1 className="serif mt-10 text-[clamp(1.8rem,3.8vw,2.4rem)] text-ink"><SiteText value={q.question}/></h1>
 
           <div className="mt-8 space-y-3" role="radiogroup" aria-label={q.question}>
             {q.options.map((opt, i) => {
@@ -111,7 +105,7 @@ export default function DiagnosticsView() {
                       : 'border-line bg-white text-ink-soft hover:border-brand/50 hover:text-ink'
                   }`}
                 >
-                  <span>{opt.text}</span>
+                  <span><SiteText value={opt.text}/></span>
                   <span
                     aria-hidden="true"
                     className={`mt-0.5 size-4 shrink-0 rounded-full border transition-colors ${
@@ -130,7 +124,7 @@ export default function DiagnosticsView() {
               disabled={selected === null || selected === undefined}
               onClick={nextStep}
             >
-              {step < QUESTIONS.length - 1 ? 'Далее' : 'Показать результат'}
+              <SiteText value={step < QUESTIONS.length - 1 ? 'Далее' : 'Показать результат'}/>
               <ArrowRight className="size-4" />
             </button>
           </div>
@@ -143,32 +137,32 @@ export default function DiagnosticsView() {
   return (
     <div className="view-enter container-site py-14 sm:py-20">
       <div className="mx-auto max-w-2xl">
-        <p className="eyebrow">Твоя ситуация</p>
+        <p className="eyebrow"><SiteText value={"Твоя ситуация"}/></p>
         <h1 className="serif mt-4 text-[clamp(1.9rem,4vw,2.7rem)] leading-[1.2] text-ink">
-          {result?.label}
+          <SiteText value={result?.label}/>
         </h1>
 
         <div className="mt-7 space-y-5 text-[16px] leading-[1.8] text-ink-soft">
           {result?.interpretation.map((p, i) => (
-            <p key={i}>{p}</p>
+            <p key={i}><SiteText value={p}/></p>
           ))}
         </div>
 
-        <h2 className="serif mt-12 text-[22px] text-ink">Рекомендованный маршрут</h2>
+        <h2 className="serif mt-12 text-[22px] text-ink"><SiteText value={"Рекомендованный маршрут"}/></h2>
         <ol className="mt-5 border-t border-line">
           {result?.route.map((r, i) => (
             <li key={i} className="flex items-baseline gap-5 border-b border-line py-5">
               <span className="serif shrink-0 text-[14px] italic text-brand">
-                {String(i + 1).padStart(2, '0')}
+                <SiteText value={String(i + 1).padStart(2, '0')}/>
               </span>
               <p className="text-[15px] leading-relaxed text-ink">
-                {r.text}{' '}
+                <SiteText value={r.text}/><SiteText value={' '}/>
                 {r.linkTo && (
                   <SiteLink
                     to={r.linkTo}
                     className="ml-1 whitespace-nowrap underline decoration-brand/50 underline-offset-2 hover:text-ink"
                   >
-                    {r.linkText} →
+                    <SiteText value={r.linkText}/> →
                   </SiteLink>
                 )}
               </p>
@@ -177,26 +171,21 @@ export default function DiagnosticsView() {
         </ol>
 
         {result?.trackNote && (
-          <p className="mt-5 text-[15px] leading-relaxed text-ink-soft">{result.trackNote}</p>
+          <p className="mt-5 text-[15px] leading-relaxed text-ink-soft"><SiteText value={result.trackNote}/></p>
         )}
 
         <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3">
           <SiteLink to="/courses" className="btn btn-brand">
-            Посмотреть курсы
-          </SiteLink>
+            <SiteText value={"Посмотреть курсы"}/></SiteLink>
           <SiteLink to="/club" className="btn btn-outline">
-            Подать заявку в клуб
-          </SiteLink>
+            <SiteText value={"Подать заявку в клуб"}/></SiteLink>
           <button type="button" className="btn-quiet" onClick={restart}>
-            Пройти ещё раз
-          </button>
+            <SiteText value={"Пройти ещё раз"}/></button>
         </div>
 
         <div className="mt-14">
           <SuccessCard title="Диагностика завершена">
-            Результат никуда не отправлялся и ни с кем не делился: он только ваш. Если захотите
-            обсудить его лично — напишите мне.
-          </SuccessCard>
+            <SiteText value={"Результат никуда не отправлялся и ни с кем не делился: он только ваш. Если захотите обсудить его лично — напишите мне."}/></SuccessCard>
         </div>
 
         <p className="mt-10 text-[13px] text-ink-soft">
@@ -205,8 +194,7 @@ export default function DiagnosticsView() {
             className="inline-flex items-center gap-1.5 underline decoration-brand/50 underline-offset-2 hover:text-ink"
           >
             <ArrowLeft className="size-4" />
-            Ко всем курсам
-          </SiteLink>
+            <SiteText value={"Ко всем курсам"}/></SiteLink>
         </p>
       </div>
     </div>

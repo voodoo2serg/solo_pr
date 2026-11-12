@@ -1,4 +1,5 @@
 'use client';
+import SiteText from '@/components/site/SiteText';
 
 import { useEffect, useState } from 'react';
 import { SiteLink } from '@/lib/router';
@@ -71,25 +72,22 @@ export default function CookieBanner() {
       >
         <div className="container-site flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
           <p className="max-w-xl text-sm leading-relaxed text-ink-soft">
-            Необходимые cookie поддерживают вход и настройки сайта. Аналитика и маркетинговые сервисы сейчас не подключены. Вы можете выбрать категории на будущее.{' '}
+            <SiteText value={"Необходимые cookie поддерживают вход и настройки сайта. Аналитика и маркетинговые сервисы сейчас не подключены. Вы можете выбрать категории на будущее."}/><SiteText value={' '}/>
             <SiteLink
               to="/cookies"
               className="whitespace-nowrap underline decoration-brand/40 underline-offset-4 hover:text-ink"
             >
-              Политика cookie
-            </SiteLink>
+              <SiteText value={"Политика cookie"}/></SiteLink>
           </p>
           <div className="flex flex-wrap items-center gap-2.5">
             <button type="button" className="btn btn-brand !py-2 text-sm" onClick={() => save({ decided: true, analytics: true, marketing: true })}>
-              Принять все
-            </button>
+              <SiteText value={"Принять все"}/></button>
             <button
               type="button"
               className="btn btn-outline !py-2 text-sm"
               onClick={() => save({ decided: true, analytics: false, marketing: false })}
             >
-              Только необходимые
-            </button>
+              <SiteText value={"Только необходимые"}/></button>
             <button
               type="button"
               className="btn-quiet !text-sm"
@@ -97,8 +95,7 @@ export default function CookieBanner() {
                 setSettingsOpen(true);
               }}
             >
-              Настроить
-            </button>
+              <SiteText value={"Настроить"}/></button>
           </div>
         </div>
       </div>
@@ -115,27 +112,24 @@ export default function CookieBanner() {
             className="w-full max-w-lg rounded-[6px] border border-line bg-paper p-6 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="serif text-xl text-ink">Категории cookie</h3>
+            <h3 className="serif text-xl text-ink"><SiteText value={"Категории cookie"}/></h3>
             <p className="mt-2 text-sm text-ink-soft">
-              Необходимые cookie включены всегда — без них сайт не работает. Остальные категории вы
-              включаете по желанию.
-            </p>
+              <SiteText value={"Необходимые cookie включены всегда — без них сайт не работает. Остальные категории вы включаете по желанию."}/></p>
 
             <div className="mt-6 space-y-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[15px] font-medium text-ink">Необходимые</p>
-                  <p className="text-sm text-ink-soft">Безопасность и работа интерфейса.</p>
+                  <p className="text-[15px] font-medium text-ink"><SiteText value={"Необходимые"}/></p>
+                  <p className="text-sm text-ink-soft"><SiteText value={"Безопасность и работа интерфейса."}/></p>
                 </div>
                 <Switch checked disabled aria-label="Необходимые cookie всегда включены" />
               </div>
               <div className="h-px bg-line" aria-hidden="true" />
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[15px] font-medium text-ink">Аналитические</p>
+                  <p className="text-[15px] font-medium text-ink"><SiteText value={"Аналитические"}/></p>
                   <p className="text-sm text-ink-soft">
-                    Обезличенная статистика посещений — чтобы понимать, что улучшать.
-                  </p>
+                    <SiteText value={"Обезличенная статистика посещений — чтобы понимать, что улучшать."}/></p>
                 </div>
                 <Switch
                   checked={analytics}
@@ -146,10 +140,9 @@ export default function CookieBanner() {
               <div className="h-px bg-line" aria-hidden="true" />
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[15px] font-medium text-ink">Маркетинговые</p>
+                  <p className="text-[15px] font-medium text-ink"><SiteText value={"Маркетинговые"}/></p>
                   <p className="text-sm text-ink-soft">
-                    Оценка эффективности рассылок и публикаций.
-                  </p>
+                    <SiteText value={"Оценка эффективности рассылок и публикаций."}/></p>
                 </div>
                 <Switch
                   checked={marketing}
@@ -165,11 +158,9 @@ export default function CookieBanner() {
                 className="btn btn-brand !py-2 text-sm"
                 onClick={() => save({ decided: true, analytics, marketing })}
               >
-                Сохранить настройки
-              </button>
+                <SiteText value={"Сохранить настройки"}/></button>
               <button type="button" className="btn-quiet !text-sm" onClick={() => setSettingsOpen(false)}>
-                Отмена
-              </button>
+                <SiteText value={"Отмена"}/></button>
             </div>
           </div>
         </div>

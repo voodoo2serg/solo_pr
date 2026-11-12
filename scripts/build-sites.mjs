@@ -5,6 +5,8 @@ import {build} from 'esbuild';
 const root=process.cwd(),temp=path.join(root,'.sites-build');
 await rm(temp,{recursive:true,force:true});await mkdir(temp,{recursive:true});
 await cp('src',path.join(temp,'src'),{recursive:true});await rm(path.join(temp,'src/app/api'),{recursive:true,force:true});
+await rm(path.join(temp,'src/app/[...slug]'),{recursive:true,force:true});
+await writeFile(path.join(temp,'src/app/page.tsx'),"import SiteShell from '@/components/site/SiteShell'; export default function Home(){return <SiteShell/>;}\n");
 await cp('public',path.join(temp,'public'),{recursive:true});
 for(const file of ['package.json','tsconfig.json','postcss.config.mjs','next-env.d.ts'])await cp(file,path.join(temp,file));
 await symlink(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir');

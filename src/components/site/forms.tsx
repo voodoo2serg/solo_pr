@@ -1,4 +1,5 @@
 'use client';
+import SiteText from '@/components/site/SiteText';
 
 import { Check } from 'lucide-react';
 import { SiteLink } from '@/lib/router';
@@ -15,9 +16,9 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
+      <span className="mb-1.5 block text-sm font-medium text-ink"><SiteText value={label}/></span>
       {children}
-      {hint && <span className="mt-1 block text-[13px] text-ink-soft">{hint}</span>}
+      {hint && <span className="mt-1 block text-[13px] text-ink-soft"><SiteText value={hint}/></span>}
     </label>
   );
 }
@@ -40,20 +41,18 @@ export function ConsentCheckbox({
         className="mt-1 size-4 shrink-0 cursor-pointer accent-[#b9705f]"
       />
       <span className="text-sm leading-snug text-ink-soft">
-        Я согласен на обработку персональных данных в соответствии с{' '}
+        <SiteText value={"Я согласен на обработку персональных данных в соответствии с"}/><SiteText value={' '}/>
         <SiteLink
           to="/consent"
           className="underline decoration-brand/50 underline-offset-2 hover:text-ink"
         >
-          условиями согласия
-        </SiteLink>{' '}
-        и{' '}
+          <SiteText value={"условиями согласия"}/></SiteLink><SiteText value={' '}/>
+        <SiteText value={"и"}/><SiteText value={' '}/>
         <SiteLink
           to="/privacy"
           className="underline decoration-brand/50 underline-offset-2 hover:text-ink"
         >
-          политикой конфиденциальности
-        </SiteLink>
+          <SiteText value={"политикой конфиденциальности"}/></SiteLink>
         .
       </span>
     </label>
@@ -77,9 +76,7 @@ export function AdsConsentCheckbox({
         className="mt-1 size-4 shrink-0 cursor-pointer accent-[#b9705f]"
       />
       <span className="text-sm leading-snug text-ink-soft">
-        Отдельно согласен получать информационные и рекламные сообщения. Необязательно: без этой
-        отметки письма приходят только по предмету обращения.
-      </span>
+        <SiteText value={"Отдельно согласен получать информационные и рекламные сообщения. Необязательно: без этой отметки письма приходят только по предмету обращения."}/></span>
     </label>
   );
 }
@@ -97,7 +94,7 @@ export function SuccessCard({
       <span className="flex size-10 items-center justify-center rounded-full bg-sage-soft text-sage">
         <Check className="size-5" />
       </span>
-      <h3 className="serif mt-4 text-2xl text-ink">{title}</h3>
+      <h3 className="serif mt-4 text-2xl text-ink"><SiteText value={title}/></h3>
       <div className="mt-2 max-w-md text-[15px] leading-relaxed text-ink-soft">{children}</div>
     </div>
   );
@@ -124,13 +121,12 @@ export function NearestEventLine({
 }) {
   return (
     <p className="mt-3 text-sm text-ink-soft">
-      Ближайшее открытое мероприятие — «{title}», {dateLabel}.{' '}
+      <SiteText value={"Ближайшее открытое мероприятие — «"}/><SiteText value={title}/>», <SiteText value={dateLabel}/>.<SiteText value={' '}/>
       <SiteLink
         to={`/events/${slug}`}
         className="underline decoration-brand/50 underline-offset-2 hover:text-ink"
       >
-        Записаться
-      </SiteLink>
+        <SiteText value={"Записаться"}/></SiteLink>
       .
     </p>
   );

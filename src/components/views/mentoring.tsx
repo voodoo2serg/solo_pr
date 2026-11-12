@@ -1,4 +1,5 @@
 'use client';
+import SiteText from '@/components/site/SiteText';
 
 import Image from 'next/image';
 import { useState } from 'react';
@@ -38,9 +39,7 @@ function MentoringForm() {
   if (sent) {
     return (
       <SuccessCard title="Письмо отправлено.">
-        Я читаю сам и отвечаю лично — обычно в течение пары дней. В письме будет честный ответ:
-        смогу ли взяться, и если да — как выглядит первый шаг.
-      </SuccessCard>
+        <SiteText value={"Я читаю сам и отвечаю лично — обычно в течение пары дней. В письме будет честный ответ: смогу ли взяться, и если да — как выглядит первый шаг."}/></SuccessCard>
     );
   }
 
@@ -88,9 +87,8 @@ function MentoringForm() {
       </div>
       <div className="mt-6 flex flex-wrap items-center gap-5">
         <button type="submit" className="btn btn-brand" disabled={!valid}>
-          Напиши мне
-        </button>
-        <p className="text-[13px] text-ink-soft">Я отвечу, смогу ли взяться. Без воронок и автоответчиков.</p>
+          <SiteText value={"Напиши мне"}/></button>
+        <p className="text-[13px] text-ink-soft"><SiteText value={"Я отвечу, смогу ли взяться. Без воронок и автоответчиков."}/></p>
       </div>
     </form>
   );
@@ -102,14 +100,11 @@ export default function MentoringView() {
       <section className="container-site pt-14 sm:pt-20">
         <div className="grid items-center gap-12 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <p className="eyebrow">Менторство</p>
+            <p className="eyebrow"><SiteText value={"Менторство"}/></p>
             <h1 className="serif mt-5 text-[clamp(2rem,4.4vw,3rem)] leading-[1.18] text-ink">
-              Некоторые вещи можно сказать только глядя в глаза.
-            </h1>
+              <SiteText value={"Некоторые вещи можно сказать только глядя в глаза."}/></h1>
             <p className="mt-6 max-w-xl text-[17px] leading-[1.8] text-ink-soft">
-              Офлайн-менторство. Не курс, не консалтинг. Раз в месяц встречаемся и разбираем то,
-              на чём ты реально застрял на пути к независимости.
-            </p>
+              <SiteText value={"Офлайн-менторство. Не курс, не консалтинг. Раз в месяц встречаемся и разбираем то, на чём ты реально застрял на пути к независимости."}/></p>
           </div>
           <div className="lg:col-span-5">
             <figure className="relative aspect-[4/5] overflow-hidden rounded-[6px] border border-line">
@@ -122,8 +117,7 @@ export default function MentoringView() {
               />
             </figure>
             <figcaption className="mt-2.5 text-[13px] italic text-ink-soft">
-              Угол кафе, скамейка в парке или тихий бар — офис не считается.
-            </figcaption>
+              <SiteText value={"Угол кафе, скамейка в парке или тихий бар — офис не считается."}/></figcaption>
           </div>
         </div>
       </section>
@@ -133,12 +127,12 @@ export default function MentoringView() {
           {BLOCKS.map((b) => (
             <div key={b.num} className="grid grid-cols-12 gap-x-4 gap-y-3 border-b border-line py-8">
               <span className="serif col-span-2 text-[15px] italic text-brand sm:col-span-1">
-                {b.num}
+                <SiteText value={b.num}/>
               </span>
-              <h2 className="serif col-span-10 text-[22px] text-ink sm:col-span-4">{b.title}</h2>
+              <h2 className="serif col-span-10 text-[22px] text-ink sm:col-span-4"><SiteText value={b.title}/></h2>
               <div className="col-span-10 col-start-3 sm:col-span-6 sm:col-start-6">
-                <p className="text-[15px] leading-[1.8] text-ink-soft">{b.text}</p>
-                <p className="mt-2 text-[14px] italic leading-relaxed text-ink-soft/90">{b.note}</p>
+                <p className="text-[15px] leading-[1.8] text-ink-soft"><SiteText value={b.text}/></p>
+                <p className="mt-2 text-[14px] italic leading-relaxed text-ink-soft/90"><SiteText value={b.note}/></p>
               </div>
             </div>
           ))}
@@ -148,11 +142,9 @@ export default function MentoringView() {
       <section className="container-site mt-16 sm:mt-20" id="napishi">
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <h2 className="serif text-[clamp(1.6rem,3vw,2.1rem)] text-ink">Напиши мне</h2>
+            <h2 className="serif text-[clamp(1.6rem,3vw,2.1rem)] text-ink"><SiteText value={"Напиши мне"}/></h2>
             <p className="mt-4 max-w-md text-[16px] leading-[1.8] text-ink-soft">
-              Расскажи, где ты сейчас и куда хочешь. Я отвечу, смогу ли взяться. Если нет — скажу
-              прямо и, если смогу, подскажу, к кому идти.
-            </p>
+              <SiteText value={"Расскажи, где ты сейчас и куда хочешь. Я отвечу, смогу ли взяться. Если нет — скажу прямо и, если смогу, подскажу, к кому идти."}/></p>
           </div>
           <div className="lg:col-span-7">
             <div className="max-w-xl">
@@ -164,15 +156,13 @@ export default function MentoringView() {
 
       <div className="container-site pb-6">
         <PageHook>
-          Если ты представляешь компанию, а не себя — иди в{' '}
+          <SiteText value={"Если ты представляешь компанию, а не себя — иди в"}/><SiteText value={' '}/>
           <SiteLink
             to="/consulting"
             className="underline decoration-brand/50 underline-offset-2 hover:text-ink"
           >
-            консалтинг
-          </SiteLink>
-          : там про аудит, воркшопы и обучение команд.
-        </PageHook>
+            <SiteText value={"консалтинг"}/></SiteLink>
+          <SiteText value={": там про аудит, воркшопы и обучение команд."}/></PageHook>
       </div>
     </div>
   );

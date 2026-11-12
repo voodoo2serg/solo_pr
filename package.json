@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test:integration": "node tests/portal.integration.mjs",
     "build:vps": "next build --webpack",
-    "test:worker": "node tests/worker.integration.mjs"
+    "test:worker": "node tests/worker.integration.mjs",
+    "test:cms": "node tests/publications.integration.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

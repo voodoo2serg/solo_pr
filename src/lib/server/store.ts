@@ -1,4 +1,5 @@
 import 'server-only';
+import {withCmsDefaults} from '../cms-defaults';
 import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync,existsSync,readFileSync,writeFileSync,renameSync} from 'node:fs';
 import path from 'node:path';
@@ -29,7 +30,7 @@ if(!leadColumns.some(c=>c.name==='contact'))db.exec("ALTER TABLE leads ADD COLUM
 const file=path.join(dir,'content.json');
 export function content():CommunityContent {if(!existsSync(file)){writeFileSync(file,JSON.stringify(seed,null,2),{mode:0o600});}const current=JSON.parse(readFileSync(file,'utf8'));
 if(!current.designRevision){current.home=seed.home;current.pages=seed.pages;current.courses=seed.courses;current.brand.name='Соло-PR';current.designRevision=2;saveContent(current);}
-const branded=withPresentation(withBranding(current));if(branded!==current)saveContent(branded);return branded;}
+const branded=withPresentation(withBranding(current));if(branded!==current)saveContent(branded);return withCmsDefaults(branded);}
 export function saveContent(next:CommunityContent){const tmp=file+'.'+randomBytes(6).toString('hex')+'.tmp';writeFileSync(tmp,JSON.stringify(next,null,2),{mode:0o600});renameSync(tmp,file);}
 export type User={id:string;email:string;username:string;name:string;about:string;password:string;role:string;club:number;theme:string;avatar:Uint8Array|null;created:string};
 export function publicUser(u:User){return {id:u.id,email:u.email,username:u.username,name:u.name,about:u.about,role:u.role,club:!!u.club,theme:u.theme,hasAvatar:!!u.avatar};}

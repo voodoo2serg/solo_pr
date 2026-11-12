@@ -1,29 +1,26 @@
 'use client';
 
+import { usePathname,useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode, type MouseEventHandler } from 'react';
 
-/**
- * Лёгкий роутер на хэше: сервер отдаёт только «/», вся навигация живёт в адресной строке
- * вида #/courses, #/club/join и т.д. При выносе в продакшн каждая view превращается
- * в отдельную страницу App Router без изменения содержимого.
- */
-
+/** Real page URLs; legacy #/ links redirect to their canonical page. */
 export function normalizeHash(): string {
   const raw = window.location.hash.replace(/^#/, '');
-  if (!raw) return '/';
+  if (!raw) return window.location.pathname;
   return raw.startsWith('/') ? raw : `/${raw}`;
 }
 
 /** Возвращает текущий путь хэша; null — пока страница не смонтирована на клиенте. */
-export function useHashRoute(): string | null {
-  const [route, setRoute] = useState<string | null>(null);
+export function useHashRoute(initialRoute?:string): string | null {
+  const pathname=usePathname();const router=useRouter();
+  const [route, setRoute] = useState<string | null>(initialRoute??null);
 
   useEffect(() => {
-    const read = () => setRoute(normalizeHash());
+    const read = () => {const target=normalizeHash();setRoute(target);if(window.location.hash.startsWith('#/'))router.replace(target);};
     read();
     window.addEventListener('hashchange', read);
     return () => window.removeEventListener('hashchange', read);
-  }, []);
+  }, [pathname,router]);
 
   return route;
 }
@@ -34,7 +31,7 @@ export function navigate(to: string) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
-  window.location.hash = target;
+  window.location.assign(target);
 }
 
 /** Плавный скролл к блоку на текущей странице (внутренние якоря конфликтуют с хэш-роутом). */
@@ -57,7 +54,7 @@ export function SiteLink({
   onClick?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   return (
-    <a href={`#${to}`} aria-label={ariaLabel} className={className} onClick={onClick}>
+    <a href={to} aria-label={ariaLabel} className={className} onClick={onClick}>
       {children}
     </a>
   );

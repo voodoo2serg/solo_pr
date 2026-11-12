@@ -1,4 +1,5 @@
 'use client';
+import SiteText from '@/components/site/SiteText';
 
 import { useState } from 'react';
 import { SiteLink } from '@/lib/router';
@@ -49,10 +50,7 @@ function ConsultingForm() {
   if (sent) {
     return (
       <SuccessCard title="Рассказ получен.">
-        Я прочитаю его лично и отвечу в течение двух рабочих дней: что вижу в ситуации, что можно
-        сделать и имеет ли смысл встречаться. Без презентаций и коммерческих предложений по
-        шаблону.
-      </SuccessCard>
+        <SiteText value={"Я прочитаю его лично и отвечу в течение двух рабочих дней: что вижу в ситуации, что можно сделать и имеет ли смысл встречаться. Без презентаций и коммерческих предложений по шаблону."}/></SuccessCard>
     );
   }
 
@@ -114,11 +112,9 @@ function ConsultingForm() {
       </div>
       <div className="mt-6 flex flex-wrap items-center gap-5">
         <button type="submit" className="btn btn-brand" disabled={!valid}>
-          Отправить
-        </button>
+          <SiteText value={"Отправить"}/></button>
         <p className="text-[13px] text-ink-soft">
-          Стоимость не публикую — она зависит от объёма. Обсудим после знакомства с ситуацией.
-        </p>
+          <SiteText value={"Стоимость не публикую — она зависит от объёма. Обсудим после знакомства с ситуацией."}/></p>
       </div>
     </form>
   );
@@ -128,33 +124,30 @@ export default function ConsultingView() {
   return (
     <div className="view-enter">
       <section className="container-site pt-14 sm:pt-20">
-        <p className="eyebrow">Консалтинг для компаний</p>
+        <p className="eyebrow"><SiteText value={"Консалтинг для компаний"}/></p>
         <h1 className="serif mt-5 max-w-3xl text-[clamp(2rem,4.4vw,3rem)] leading-[1.18] text-ink">
-          Ваш PR-отдел делает PR для себя?
-        </h1>
+          <SiteText value={"Ваш PR-отдел делает PR для себя?"}/></h1>
         <p className="mt-6 max-w-2xl text-[17px] leading-[1.8] text-ink-soft">
-          Внешний аудит коммуникаций, стратегические воркшопы, внутреннее обучение. Для компаний,
-          которые хотят превратить коммуникации из «сдать отчёт» в «работает».
-        </p>
+          <SiteText value={"Внешний аудит коммуникаций, стратегические воркшопы, внутреннее обучение. Для компаний, которые хотят превратить коммуникации из «сдать отчёт» в «работает»."}/></p>
       </section>
 
       <section className="container-site mt-16 sm:mt-24">
         <div className="border-t border-line">
           {STEPS.map((s) => (
             <div key={s.num} className="grid grid-cols-12 gap-x-4 gap-y-4 border-b border-line py-9">
-              <span className="eyebrow-muted col-span-12 sm:col-span-1">{s.num}</span>
+              <span className="eyebrow-muted col-span-12 sm:col-span-1"><SiteText value={s.num}/></span>
               <h2 className="serif col-span-12 text-[23px] text-ink sm:col-span-4">
-                {s.title}
+                <SiteText value={s.title}/>
               </h2>
               <div className="col-span-12 sm:col-span-7">
-                <p className="max-w-xl text-[16px] leading-[1.8] text-ink">{s.phrase}</p>
+                <p className="max-w-xl text-[16px] leading-[1.8] text-ink"><SiteText value={s.phrase}/></p>
                 <dl className="mt-4 space-y-2.5">
                   {s.details.map(([k, v]) => (
                     <div key={k} className="grid gap-x-4 gap-y-0.5 sm:grid-cols-12">
                       <dt className="text-[13px] uppercase tracking-[0.12em] text-ink-soft sm:col-span-2 sm:pt-0.5">
-                        {k}
+                        <SiteText value={k}/>
                       </dt>
-                      <dd className="text-[15px] leading-relaxed text-ink-soft sm:col-span-10">{v}</dd>
+                      <dd className="text-[15px] leading-relaxed text-ink-soft sm:col-span-10"><SiteText value={v}/></dd>
                     </div>
                   ))}
                 </dl>
@@ -168,12 +161,9 @@ export default function ConsultingView() {
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <h2 className="serif text-[clamp(1.6rem,3vw,2.1rem)] text-ink">
-              Расскажите о вашей ситуации
-            </h2>
+              <SiteText value={"Расскажите о вашей ситуации"}/></h2>
             <p className="mt-4 max-w-md text-[16px] leading-[1.8] text-ink-soft">
-              Достаточно пяти строк обычным языком. Я прочитаю сам и отвечу честно: есть ли смысл
-              встречаться. Иногда честный ответ — «вам пока не нужен консультант».
-            </p>
+              <SiteText value={"Достаточно пяти строк обычным языком. Я прочитаю сам и отвечу честно: есть ли смысл встречаться. Иногда честный ответ — «вам пока не нужен консультант»."}/></p>
           </div>
           <div className="lg:col-span-7">
             <div className="max-w-xl">
@@ -185,15 +175,13 @@ export default function ConsultingView() {
 
       <div className="container-site pb-6">
         <PageHook>
-          Если хочешь сначала разобраться сам —{' '}
+          <SiteText value={"Если хочешь сначала разобраться сам —"}/><SiteText value={' '}/>
           <SiteLink
             to="/courses/diagnostika"
             className="underline decoration-brand/50 underline-offset-2 hover:text-ink"
           >
-            начни с диагностики
-          </SiteLink>
-          : десять минут про личную позицию, а не про компанию.
-        </PageHook>
+            <SiteText value={"начни с диагностики"}/></SiteLink>
+          <SiteText value={": десять минут про личную позицию, а не про компанию."}/></PageHook>
       </div>
     </div>
   );

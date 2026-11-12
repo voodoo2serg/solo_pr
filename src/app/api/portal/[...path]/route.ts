@@ -1,3 +1,4 @@
+import {publicationError} from '@/lib/publications';
 import {parseContact,inquiryTopic} from '@/lib/inquiries';
 import {NextRequest,NextResponse} from 'next/server';
 import {randomBytes,randomUUID} from 'node:crypto';
@@ -17,10 +18,10 @@ function cookieOptions(){return {httpOnly:true,secure:process.env.COOKIE_SECURE=
 function startSession(u:User){const token=randomBytes(32).toString('base64url');db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(tokenHash(token),u.id,Date.now()+TTL);const res=json({user:publicUser(u)});res.cookies.set(COOKIE,token,cookieOptions());return res;}
 export async function GET(req:NextRequest,{params}:{params:Promise<{path:string[]}>}){
  const route=(await params).path.join('/');const user=sessionUser(req.cookies.get(COOKIE)?.value);const c=content();
- if(route==='content'){return json({...c,materials:c.materials.map(({body,...m})=>m),events:user?c.events.map(({roomUrl,recordingUrl,...e})=>e):[]});}
+ if(route==='content'){return json({...c,videos:(c.videos||[]).filter((v:any)=>v.published!==false),courses:c.courses.filter((v:any)=>v.published!==false),materials:c.materials.filter((v:any)=>v.published!==false).map(({body,...m})=>m),events:user?c.events.map(({roomUrl,recordingUrl,...e})=>e):[]});}
  if(route==='me')return json({user:user?publicUser(user):null});
  if(route==='avatar'){if(!user?.avatar)return error('Фото не найдено',404);return new NextResponse(new Uint8Array(user.avatar),{headers:{'Content-Type':'image/webp','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}
- if(route.startsWith('materials/')){const m=c.materials.find(m=>m.id===route.slice(10));if(!m)return error('Материал не найден',404);if(m.access==='club'&&!user?.club&&user?.role!=='admin')return error('Материал доступен участникам клуба',403);return json({material:m});}
+ if(route.startsWith('materials/')){const m=c.materials.find(m=>m.published!==false&&m.id===route.slice(10));if(!m)return error('Материал не найден',404);if(m.access==='club'&&!user?.club&&user?.role!=='admin')return error('Материал доступен участникам клуба',403);return json({material:m});}
  if(!user)return error('Войдите в аккаунт',401);
  if(route==='dashboard'){const saved=db.prepare('SELECT material_id,done FROM saved WHERE user_id=?').all(user.id);const attendance=db.prepare('SELECT event_id FROM attendance WHERE user_id=?').all(user.id) as {event_id:string}[];return json({saved,events:c.events.filter(e=>attendance.some(a=>a.event_id===e.id)).map(e=>({...e,roomUrl:undefined,recordingUrl:undefined})),courses:db.prepare('SELECT course_id,purchased FROM purchases WHERE user_id=?').all(user.id),documents:db.prepare('SELECT id,title,url,created FROM documents WHERE user_id=?').all(user.id),requests:db.prepare('SELECT kind,created FROM requests WHERE user_id=?').all(user.id)});}
  if(route==='admin'){if(user.role!=='admin')return error('Недостаточно прав',403);return json({content:c,users:db.prepare('SELECT id,name,username,email,club,role FROM users ORDER BY created DESC').all(),requests:[...db.prepare('SELECT r.*,u.name,u.email FROM requests r JOIN users u ON u.id=r.user_id ORDER BY r.created DESC').all(),...db.prepare('SELECT * FROM leads ORDER BY created DESC').all()]});}
@@ -100,7 +101,7 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{path:string
  const ids=new Set<string>();for(const m of c.materials){if(!/^[a-z0-9-]{1,80}$/.test(m.id)||ids.has(m.id)||!['open','club'].includes(m.access)||!m.title||typeof m.body!=='string')return error('Проверьте материалы и уникальность их кодов');ids.add(m.id);}
  ids.clear();for(const e of c.events){if(!/^[a-z0-9-]{1,80}$/.test(e.id)||ids.has(e.id)||!e.title||!['open','club'].includes(e.access)||!Number.isFinite(Date.parse(e.start))||Date.parse(e.end)<=Date.parse(e.start)||!safeLink(e.roomUrl)||!safeLink(e.recordingUrl))return error('Проверьте даты и HTTPS-ссылки событий');ids.add(e.id);}
  if(!Array.isArray(c.courses)||c.courses.length>300)return error('Проверьте программы');
- for(const v of c.videos||[])if(!v.id||!v.title||!v.url||!safeLink(v.url))return error('Проверьте HTTPS-ссылки видео');
+ const invalidPublication=publicationError(c);if(invalidPublication)return error(invalidPublication);
  if(!safeLink(c.brand.telegram)||!safeLink(c.brand.vk)||!safeLink(c.brand.max||''))return error('Контактные ссылки должны начинаться с https://');
  saveContent(c);db.prepare('INSERT INTO audit(actor,action,created) VALUES(?,?,?)').run(user.id,'content.update',new Date().toISOString());return json({ok:true});
  }
