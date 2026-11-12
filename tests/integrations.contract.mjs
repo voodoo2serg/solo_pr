@@ -83,10 +83,16 @@ try{
  const lead=db.prepare('SELECT sync_status FROM leads WHERE id=?').get(leadBody.id);
  check(lead&&lead.sync_status==='ok','Lead synced to mock voronka');
  check(received.some(x=>x.url==='/hooks/leads'&&x.body.includes('lead.created')),'Mock received lead.created');
- const leadPayload=JSON.parse(received.find(x=>x.url==='/hooks/leads').body);
+ const leadHit=received.find(x=>x.url==='/hooks/leads');
+ const leadPayload=JSON.parse(leadHit.body);
  check(leadPayload.idempotency_key===leadBody.id&&leadPayload.data.source==='solo_pr','Lead contract fields');
+ check(leadPayload.type==='lead.created'&&leadPayload.kind==='lead.created','Lead dual-emits type+kind');
+ check(leadPayload.event_id===leadBody.id&&leadPayload.idempotency_key===leadBody.id,'Lead dual-emits event_id+idempotency_key');
+ check(!!leadHit.headers['x-solo-timestamp']&&!!leadHit.headers['x-solo-signature'],'Lead emits x-solo-* headers');
+ check(!!leadHit.headers['x-voronka-timestamp']&&!!leadHit.headers['x-voronka-signature'],'Lead emits x-voronka-* aliases');
+ check(leadHit.headers['x-solo-signature']===leadHit.headers['x-voronka-signature'],'Solo/voronka signature aliases match');
 
- // Inbound deal.paid
+ // Inbound deal.paid (canonical type+event_id + x-voronka)
  const event={event_id:'evt-1',type:'deal.paid',email:'buyer@example.test',course_id:'digital-transformation',club:true,name:'Buyer'};
  const raw=JSON.stringify(event);
  const ts=String(Date.now());
@@ -111,6 +117,32 @@ try{
  });
  r=await inboundPOST(inboundReq);
  check(r.status===200&&(await body(r)).duplicate===true,'Inbound idempotent');
+
+ // Dual-read: kind + idempotency_key + x-solo headers
+ const dualEvent={kind:'access.granted',idempotency_key:'evt-dual-1',email:'dual@example.test',commerce_product_id:'digital-transformation',club:true,name:'Dual'};
+ const dualRaw=JSON.stringify(dualEvent);
+ const dualTs=String(Date.now());
+ const dualSig=createHmac('sha256',secret).update(dualTs+'.'+dualRaw).digest('hex');
+ inboundReq=new NextRequest('https://test.local/api/integrations/voronka',{
+  method:'POST',
+  headers:{'content-type':'application/json','x-solo-timestamp':dualTs,'x-solo-signature':'sha256='+dualSig},
+  body:dualRaw,
+ });
+ r=await inboundPOST(inboundReq);
+ check(r.status===200&&(await body(r)).ok===true,'Inbound accepts kind+idempotency_key via x-solo-*');
+
+ // Dual-read nested data + type/kind both present
+ const nestedEvent={type:'access.granted',kind:'access.granted',event_id:'evt-nested-1',idempotency_key:'evt-nested-1',data:{email:'nested@example.test',course_id:'digital-transformation',club:false,name:'Nested'}};
+ const nestedRaw=JSON.stringify(nestedEvent);
+ const nestedTs=String(Date.now());
+ const nestedSig=createHmac('sha256',secret).update(nestedTs+'.'+nestedRaw).digest('hex');
+ inboundReq=new NextRequest('https://test.local/api/integrations/voronka',{
+  method:'POST',
+  headers:{'content-type':'application/json','x-voronka-timestamp':nestedTs,'x-voronka-signature':'sha256='+nestedSig},
+  body:nestedRaw,
+ });
+ r=await inboundPOST(inboundReq);
+ check(r.status===200&&(await body(r)).ok===true,'Inbound accepts nested data envelope');
 
  // Bad signature
  inboundReq=new NextRequest('https://test.local/api/integrations/voronka',{
