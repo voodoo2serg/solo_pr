@@ -1,3 +1,4 @@
+import {parseContact,inquiryTopic} from '../src/lib/inquiries';
 import {withBranding,withPresentation} from '../src/lib/brand-content';
 import {seed} from '../src/lib/server/seed';
 const COOKIE='solo_session',TTL=7*86400000;
@@ -22,7 +23,7 @@ const c=await getContent();
 async function rate(key:string,max:number,minutes:number){const now=Date.now();await run('DELETE FROM limits WHERE key=? AND expires<?',key,now);const row=await first('INSERT INTO limits(key,count,expires) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count',key,now+minutes*60000);return row.count<=max;}
 async function session(u:any){const verified=req.headers.get('oai-authenticated-user-email')?.toLowerCase();if(env.ADMIN_EMAIL&&verified===env.ADMIN_EMAIL.toLowerCase()&&u.email===verified){await run("UPDATE users SET role='admin',club=1 WHERE id=?",u.id);u={...u,role:'admin',club:1};}const t=hex(crypto.getRandomValues(new Uint8Array(32)));await run('INSERT INTO sessions(token,user_id,expires) VALUES(?,?,?)',await sha(t),u.id,Date.now()+TTL);return json({user:pub(u)},200,{'Set-Cookie':COOKIE+'='+t+'; HttpOnly; SameSite=Lax; Path=/; Max-Age='+TTL/1000+(url.protocol==='https:'?'; Secure':'')});}
 if(req.method==='GET'){
- if(route==='content')return json({...c,materials:c.materials.map(({body,...m}:any)=>m),events:c.events.map(({roomUrl,recordingUrl,...e}:any)=>e)});
+ if(route==='content')return json({...c,materials:c.materials.map(({body,...m}:any)=>m),events:user?c.events.map(({roomUrl,recordingUrl,...e}:any)=>e):[]});
  if(route==='me')return json({user:user?pub(user):null});
  if(route==='avatar'){if(!user?.avatar)return fail('Фото не найдено',404);const match=user.avatar.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);if(!match)return fail('Фото не найдено',404);return new Response(Uint8Array.from(atob(match[2]),v=>v.charCodeAt(0)),{headers:{'Content-Type':match[1],'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}
  if(route.startsWith('materials/')){const m=c.materials.find((m:any)=>m.id===route.slice(10));if(!m)return fail('Материал не найден',404);if(m.access==='club'&&!user?.club&&user?.role!=='admin')return fail('Нужен доступ в клуб',403);return json({material:m});}
@@ -36,11 +37,15 @@ const origin=req.headers.get('origin');if(origin!==url.origin)return fail('Не�
 if(Number(req.headers.get('content-length')||0)>3000000)return fail('Слишком большой запрос',413);
 let b:any;try{const raw=await req.text();if(enc.encode(raw).byteLength>3000000)return fail('Слишком большой запрос',413);b=JSON.parse(raw);if(!b||typeof b!=='object'||Array.isArray(b))return fail('Некорректный запрос');}catch{return fail('Некорректный запрос');}
 if(route==='lead'){
- const name=String(b.name||'').trim(),email=String(b.email||'').trim().toLowerCase(),kind=String(b.kind||''),service=String(b.service||''),message=String(b.message||'').trim();
- if(b.consent!==true||!emailOK(email)||name.length<2||name.length>80||message.length<10||message.length>3000||service.length>120||!['business','club','course'].includes(kind))return fail('Проверьте поля и подтвердите согласие на обработку данных.');
- const ip=req.headers.get('cf-connecting-ip')||'unknown';if(!await rate('lead:'+await sha(email),3,60)||!await rate('lead-ip:'+await sha(ip),20,60))return fail('Заявка уже отправлена. Повторите позже.',429);
- const now=new Date().toISOString();await run('INSERT INTO leads VALUES(?,?,?,?,?,?,?,?,?)',crypto.randomUUID(),name,email,kind,service,message,JSON.stringify({acceptedAt:now,version:'2026-11-12',document:'/consent',privacy:'/privacy',adsConsent:b.adsConsent===true}),b.adsConsent===true?1:0,now);return json({ok:true});
-}
+ const name=String(b.name||'').trim()||'Гость',kind=String(b.kind||''),service=String(b.service||'').trim();
+ const contact=parseContact(b.contactType||'email',b.contact??b.email);
+ if(b.consent!==true||!contact||name.length>80||service.length>120||!['business','club','course'].includes(kind))return fail('Укажите контакт и подтвердите согласие на обработку данных.');
+ const message=inquiryTopic(kind,service,c.courses);
+ const now=new Date().toISOString();
+ const ip=req.headers.get('cf-connecting-ip')||'unknown';if(!await rate('lead:'+await sha(contact.type+':'+contact.value),3,60)||!await rate('lead-ip:'+await sha(ip),20,60))return fail('Заявка уже отправлена. Повторите позже.',429);
+ await run('INSERT INTO leads(id,name,email,kind,service,message,consent,ads_consent,created,contact_type,contact) VALUES(?,?,?,?,?,?,?,?,?,?,?)',crypto.randomUUID(),name,contact.email,kind,service,message,JSON.stringify({acceptedAt:now,version:'2026-11-12',document:'/consent',privacy:'/privacy',adsConsent:b.adsConsent===true}),b.adsConsent===true?1:0,now,contact.type,contact.value);
+ return json({ok:true});
+ }
 if(route==='register'||route==='login'){
  const login=String(b.login||'').trim().toLowerCase(),pass=String(b.password||'');if(pass.length>128)return fail('Пароль слишком длинный');
  if(!await rate('auth:'+await sha(login),10,15)||!await rate('auth-ip:'+await sha(req.headers.get('cf-connecting-ip')||'unknown'),50,15))return fail('Слишком много попыток',429);

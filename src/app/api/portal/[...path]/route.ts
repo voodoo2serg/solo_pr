@@ -1,3 +1,4 @@
+import {parseContact,inquiryTopic} from '@/lib/inquiries';
 import {NextRequest,NextResponse} from 'next/server';
 import {randomBytes,randomUUID} from 'node:crypto';
 import sharp from 'sharp';
@@ -16,7 +17,7 @@ function cookieOptions(){return {httpOnly:true,secure:process.env.COOKIE_SECURE=
 function startSession(u:User){const token=randomBytes(32).toString('base64url');db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(tokenHash(token),u.id,Date.now()+TTL);const res=json({user:publicUser(u)});res.cookies.set(COOKIE,token,cookieOptions());return res;}
 export async function GET(req:NextRequest,{params}:{params:Promise<{path:string[]}>}){
  const route=(await params).path.join('/');const user=sessionUser(req.cookies.get(COOKIE)?.value);const c=content();
- if(route==='content'){return json({...c,materials:c.materials.map(({body,...m})=>m),events:c.events.map(({roomUrl,recordingUrl,...e})=>e)});}
+ if(route==='content'){return json({...c,materials:c.materials.map(({body,...m})=>m),events:user?c.events.map(({roomUrl,recordingUrl,...e})=>e):[]});}
  if(route==='me')return json({user:user?publicUser(user):null});
  if(route==='avatar'){if(!user?.avatar)return error('Фото не найдено',404);return new NextResponse(new Uint8Array(user.avatar),{headers:{'Content-Type':'image/webp','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}
  if(route.startsWith('materials/')){const m=c.materials.find(m=>m.id===route.slice(10));if(!m)return error('Материал не найден',404);if(m.access==='club'&&!user?.club&&user?.role!=='admin')return error('Материал доступен участникам клуба',403);return json({material:m});}
@@ -48,12 +49,13 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{path:string
   if(!u||!valid)return error('Неверный логин или пароль',401);return startSession(u);
  }
  if(route==='lead'){
- const name=String(b.name||'').trim(),email=String(b.email||'').trim().toLowerCase(),kind=String(b.kind||''),service=String(b.service||''),message=String(b.message||'').trim();
- if(b.consent!==true||!emailOK(email)||name.length<2||name.length>80||message.length<10||message.length>3000||service.length>120||!['business','club','course'].includes(kind))return error('Проверьте поля и подтвердите согласие на обработку данных.');
- const ip=req.headers.get('x-forwarded-for')?.split(',')[0]||'unknown';
- if(!limit('lead:'+tokenHash(email),3,60)||!limit('lead-ip:'+tokenHash(ip),20,60))return error('Заявка уже отправлена. Повторите позже.',429);
+ const name=String(b.name||'').trim()||'Гость',kind=String(b.kind||''),service=String(b.service||'').trim();
+ const contact=parseContact(b.contactType||'email',b.contact??b.email);
+ if(b.consent!==true||!contact||name.length>80||service.length>120||!['business','club','course'].includes(kind))return error('Укажите контакт и подтвердите согласие на обработку данных.');
+ const message=inquiryTopic(kind,service,content().courses);
  const now=new Date().toISOString();
- db.prepare('INSERT INTO leads VALUES(?,?,?,?,?,?,?,?,?)').run(randomUUID(),name,email,kind,service,message,JSON.stringify({acceptedAt:now,version:'2026-11-12',document:'/consent',privacy:'/privacy',adsConsent:b.adsConsent===true}),b.adsConsent===true?1:0,now);
+ const ip=req.headers.get('x-forwarded-for')?.split(',')[0]||'unknown';if(!limit('lead:'+tokenHash(contact.type+':'+contact.value),3,60)||!limit('lead-ip:'+tokenHash(ip),20,60))return error('Заявка уже отправлена. Повторите позже.',429);
+ db.prepare('INSERT INTO leads(id,name,email,kind,service,message,consent,ads_consent,created,contact_type,contact) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(randomUUID(),name,contact.email,kind,service,message,JSON.stringify({acceptedAt:now,version:'2026-11-12',document:'/consent',privacy:'/privacy',adsConsent:b.adsConsent===true}),b.adsConsent===true?1:0,now,contact.type,contact.value);
  return json({ok:true});
  }
  if(!user)return error('Войдите в аккаунт',401);

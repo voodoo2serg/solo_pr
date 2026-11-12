@@ -65,7 +65,7 @@ export default function CookieBanner() {
   return (
     <>
       <div
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-white shadow-[0_-10px_40px_-20px_rgba(44,44,44,0.25)]"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-paper shadow-[0_-10px_40px_-20px_rgba(44,44,44,0.25)]"
         role="dialog"
         aria-label="Настройки cookie"
       >
@@ -112,7 +112,7 @@ export default function CookieBanner() {
           onClick={() => setSettingsOpen(false)}
         >
           <div
-            className="w-full max-w-lg rounded-[6px] border border-line bg-white p-6 sm:p-8"
+            className="w-full max-w-lg rounded-[6px] border border-line bg-paper p-6 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="serif text-xl text-ink">Категории cookie</h3>

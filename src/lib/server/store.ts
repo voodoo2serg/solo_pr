@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS leads(id TEXT PRIMARY KEY,name TEXT NOT NULL,email TE
 CREATE TABLE IF NOT EXISTS purchases(user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,course_id TEXT NOT NULL,purchased TEXT NOT NULL,PRIMARY KEY(user_id,course_id));
 CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,title TEXT NOT NULL,url TEXT NOT NULL,created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,actor TEXT NOT NULL,action TEXT NOT NULL,created TEXT NOT NULL);`);
+const leadColumns=db.prepare('PRAGMA table_info(leads)').all() as {name:string}[];
+if(!leadColumns.some(c=>c.name==='contact_type'))db.exec("ALTER TABLE leads ADD COLUMN contact_type TEXT NOT NULL DEFAULT 'email'");
+if(!leadColumns.some(c=>c.name==='contact'))db.exec("ALTER TABLE leads ADD COLUMN contact TEXT NOT NULL DEFAULT ''");
 const file=path.join(dir,'content.json');
 export function content():CommunityContent {if(!existsSync(file)){writeFileSync(file,JSON.stringify(seed,null,2),{mode:0o600});}const current=JSON.parse(readFileSync(file,'utf8'));
 if(!current.designRevision){current.home=seed.home;current.pages=seed.pages;current.courses=seed.courses;current.brand.name='Соло-PR';current.designRevision=2;saveContent(current);}
