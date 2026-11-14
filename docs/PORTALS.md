@@ -1,12 +1,15 @@
-# Порталы solo-pr.ru (CMS phase)
+# Порталы solo-pr.ru
+
+Принципы интеграции и SoR: [INTEGRATION.md](./INTEGRATION.md). Карта backend: [BACKEND_ARCHITECTURE.md](./BACKEND_ARCHITECTURE.md).
 
 | Хост | Назначение | Приложение |
 |------|------------|------------|
 | `https://solo-pr.ru` | Публичный сайт + «Войти» → ЛК **ученика** | solo_pr |
 | `https://cms.solo-pr.ru` | CMS `/admin`, матрица staff-ролей | solo_pr (тот же контейнер) |
-| `https://crm.solo-pr.ru` | CRM / платежи | voronka `/crm/` |
-| `https://voronka.solo-pr.ru` | Боты / сценарии | voronka |
+| `https://crm.solo-pr.ru` | CRM / платежи (Twenty-like UI) | voronka `/crm/` |
+| `https://voronka.solo-pr.ru` | Боты / сценарии / ops | voronka `/ops/` + Mini App |
 | `https://lms.solo-pr.ru` | OpenOlat + adapter (stub until LMS up) | lms_end / OpenOlat |
+| `https://mail.vodopetov.ru` | Webmail / Mailu admin | Mailu (не CRM) |
 
 ## Инварианты
 

@@ -21,7 +21,7 @@
 
 ## Технологии и размещение
 
-**Production ПДн (единственный путь):** российский VPS / официальное облако РФ — Node.js 24, Next.js 16, React 19, SQLite + JSON. Сборка: `npm run build:vps` (Dockerfile). Интеграции с voronka/lms_end — подписанные webhook/API, без shared DB. Документы: [docs/VPS.md](docs/VPS.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+**Production ПДн (единственный путь):** российский VPS / официальное облако РФ — Node.js 24, Next.js 16, React 19, SQLite + JSON. Сборка: `npm run build:vps` (Dockerfile). Интеграции с voronka/lms_end — подписанные webhook/API, без shared DB. Документы: [docs/VPS.md](docs/VPS.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/INTEGRATION.md](docs/INTEGRATION.md) (принципы платформы), [docs/BACKEND_ARCHITECTURE.md](docs/BACKEND_ARCHITECTURE.md) (сервисы/порты/env), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) (wire), [docs/PORTALS.md](docs/PORTALS.md).
 
 **Sites / Cloudflare Worker + D1:** только non-PII demo / legacy (`npm run build`). **Не** использовать для реальных персональных данных (152‑ФЗ). Auto-elevate админа по platform header выключен по умолчанию (`SITES_ADMIN_ELEVATE`).
 
