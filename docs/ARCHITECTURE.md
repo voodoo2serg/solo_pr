@@ -18,7 +18,7 @@
 | **VPS / RU cloud** (`npm run build:vps`, Docker Compose + Caddy) | **Единственный production-путь для ПДн** |
 | Sites / Cloudflare Worker + D1 (`npm run build`) | Non-PII demo / legacy; **не** для реальных пользователей с ПДн |
 
-См. [VPS.md](./VPS.md), [INTEGRATIONS.md](./INTEGRATIONS.md).
+См. [VPS.md](./VPS.md), [INTEGRATION.md](./INTEGRATION.md) (принципы SoR / порталы), [BACKEND_ARCHITECTURE.md](./BACKEND_ARCHITECTURE.md) (карта сервисов), [INTEGRATIONS.md](./INTEGRATIONS.md) (wire), [PORTALS.md](./PORTALS.md).
 
 ## Данные
 
