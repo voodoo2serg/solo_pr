@@ -43,6 +43,12 @@ solo-pr.ru {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3000
 }
+
+# Staff CMS (same app). See docs/PORTALS.md
+cms.solo-pr.ru {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3000
+}
 ```
 
 Проверьте конфигурацию и перечитайте её:

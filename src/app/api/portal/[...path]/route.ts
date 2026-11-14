@@ -4,6 +4,9 @@ import {NextRequest,NextResponse} from 'next/server';
 import {randomBytes,randomUUID} from 'node:crypto';
 import sharp from 'sharp';
 import {db,content,saveContent,publicUser,sessionUser,hashPassword,verifyPassword,tokenHash,limit,type User} from '@/lib/server/store';
+import {isAllowedBrowserOrigin,resolvePortalKind,PORTAL_URLS} from '@/lib/portals';
+import {deleteStaffRole,ensureBootstrapStaffMatrix,listStaffRoles,upsertStaffRole,userHasZone,zonesForUser,type StaffZones} from '@/lib/server/staff-roles';
+
 import type {CommunityContent} from '@/lib/content-types';
 import {
  beginOidcLogin,createLmsHandoff,exchangeOidcCode,fetchCrmSnapshot,fetchLmsStatuses,integrationStatusPublic,
@@ -23,9 +26,13 @@ function error(message:string,status=400){return json({error:message},status);}
 const emailOK=(s:string)=>s.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 const loginOK=(s:string)=>/^[a-z0-9_.-]{3,40}$/.test(s);
 function safeLink(s:string){if(!s)return true;try{return new URL(s).protocol==='https:';}catch{return false;}}
+
+function userPayload(u:User){ensureBootstrapStaffMatrix();const zones=zonesForUser(u);return {...publicUser(u),staffZones:zones,cmsUrl:PORTAL_URLS.cms+'/admin'};}
+function requireCmsAdmin(user:User|null){if(!user||user.role!=='admin')return 'Недостаточно прав';ensureBootstrapStaffMatrix();if(!userHasZone(user,'cms'))return 'Нет доступа к зоне CMS. Добавьте запись в «Администраторы и роли».';return null;}
+
 function cookieOptions(){return {httpOnly:true,secure:process.env.COOKIE_SECURE==='true'||(process.env.NODE_ENV==='production'&&process.env.COOKIE_SECURE!=='false'),sameSite:'lax' as const,path:'/',maxAge:TTL/1000};}
 function issueSessionToken(u:User){const token=randomBytes(32).toString('base64url');db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(tokenHash(token),u.id,Date.now()+TTL);return token;}
-function startSession(u:User){const token=issueSessionToken(u);const res=json({user:publicUser(u)});res.cookies.set(COOKIE,token,cookieOptions());return res;}
+function startSession(u:User){const token=issueSessionToken(u);const res=json({user:userPayload(u)});res.cookies.set(COOKIE,token,cookieOptions());return res;}
 /** SPA uses hash routes; after OIDC set session cookie and redirect to /#/<path>. */
 function redirectWithSession(u:User,destination:string,req:NextRequest){
  const token=issueSessionToken(u);
@@ -43,7 +50,7 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{path:string[
  const route=(await params).path.join('/');const user=sessionUser(req.cookies.get(COOKIE)?.value);const c=content();
  try{
  if(route==='content'){return json({...c,videos:(c.videos||[]).filter((v:any)=>v.published!==false),courses:c.courses.filter((v:any)=>v.published!==false),materials:c.materials.filter((v:any)=>v.published!==false).map(({body,...m})=>m),events:user?c.events.map(({roomUrl,recordingUrl,...e})=>e):[]});}
- if(route==='me')return json({user:user?publicUser(user):null});
+ if(route==='me'){if(user)ensureBootstrapStaffMatrix();return json({user:user?userPayload(user):null,portal:resolvePortalKind(req.headers.get('host'))});}
  if(route==='auth/oidc')return json(oidcConfigPublic());
  if(route==='avatar'){if(!user?.avatar)return error('Фото не найдено',404);return new NextResponse(new Uint8Array(user.avatar),{headers:{'Content-Type':'image/webp','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}
  if(route.startsWith('media/')){
@@ -95,24 +102,25 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{path:string[
   return json(data);
  }
  if(route==='admin'){
-  if(user.role!=='admin')return error('Недостаточно прав',403);
+  {const d=requireCmsAdmin(user);if(d)return error(d,403);}
   auditAccess(user.id,'admin.view_users_leads');
   return json({
    content:c,
    users:db.prepare('SELECT id,name,username,email,club,role,external_id,club_source FROM users ORDER BY created DESC').all(),
    requests:[...db.prepare('SELECT r.*,u.name,u.email FROM requests r JOIN users u ON u.id=r.user_id ORDER BY r.created DESC').all(),...db.prepare('SELECT * FROM leads ORDER BY created DESC').all()],
    integrations:integrationStatusPublic(),
+   staffRoles:listStaffRoles(),
    outbox:outboxStats(),
    documentsMeta:documentStorageMeta,
    mediaMeta:mediaStorageMeta,
   });
  }
  if(route==='admin/integrations'){
-  if(user.role!=='admin')return error('Недостаточно прав',403);
+  {const d=requireCmsAdmin(user);if(d)return error(d,403);}
   return json({...integrationStatusPublic(),outbox:outboxStats(),documents:documentStorageMeta});
  }
  if(route==='admin/audit'){
-  if(user.role!=='admin')return error('Недостаточно прав',403);
+  {const d=requireCmsAdmin(user);if(d)return error(d,403);}
   return json({items:db.prepare('SELECT id,actor,action,created FROM audit ORDER BY id DESC LIMIT 200').all()});
  }
  logJson('info',{request_id:requestId,route,user_id:user?.id,status:404,latency_ms:Date.now()-started});
@@ -128,7 +136,7 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{path:string
  const requestId=newRequestId();
  const started=Date.now();
  // All browser writes must originate from the same origin. M2M uses /api/integrations/*.
- const origin=req.headers.get('origin');let originAllowed=false;try{const parsed=new URL(origin||'');originAllowed=['http:','https:'].includes(parsed.protocol)&&(process.env.SITE_ORIGIN?parsed.origin===process.env.SITE_ORIGIN:parsed.origin===new URL(req.url).origin||parsed.host===req.headers.get('host'));}catch{}if(!originAllowed)return error('Недопустимый источник запроса',403);
+ const origin=req.headers.get('origin');let originAllowed=false;try{const parsed=new URL(origin||'');originAllowed=isAllowedBrowserOrigin(origin,req.headers.get('host'),req.url);}catch{}if(!originAllowed)return error('Недопустимый источник запроса',403);
  const route=(await params).path.join('/');const token=req.cookies.get(COOKIE)?.value;const user=sessionUser(token);
  if(Number(req.headers.get('content-length')||0)>4_500_000)return error('Слишком большой запрос',413);
  let b:Record<string,unknown>;try{const raw=await req.text();if(Buffer.byteLength(raw)>4_500_000)return error('Слишком большой запрос',413);b=JSON.parse(raw);if(!b||Array.isArray(b)||typeof b!=='object')return error('Некорректный запрос');}catch{return error('Некорректный запрос');}
@@ -220,7 +228,7 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{path:string
   res.cookies.set(COOKIE,'',{...cookieOptions(),maxAge:0});
   return res;
  }
- if(user.role!=='admin')return error('Недостаточно прав',403);
+ {const d=requireCmsAdmin(user);if(d)return error(d,403);}
  if(route==='admin/content'){
   const c=b.content as CommunityContent;
   if(!c||!c.home||!c.brand||!c.pages||!c.legal||!Array.isArray(c.materials)||!Array.isArray(c.events)||c.materials.length>300||c.events.length>300)return error('Некорректное содержимое');
@@ -270,6 +278,20 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{path:string
    return json({ok:true,document:stored});
   }catch(e){return error(e instanceof Error?e.message:'Не удалось сохранить документ');}
  }
+ 
+ if(route==='admin/staff-roles'){
+  const denied=requireCmsAdmin(user);if(denied)return error(denied,403);
+  ensureBootstrapStaffMatrix();
+  if(b.remove){deleteStaffRole(String(b.email||''));return json({ok:true,staffRoles:listStaffRoles()});}
+  try{
+   const row=upsertStaffRole({email:String(b.email||''),name:String(b.name||''),zones:(b.zones||{}) as StaffZones,checklist:(b.checklist||{}) as any,updatedBy:user!.email});
+   // Keep users.role=admin when cms/crm/voronka/lms zone present
+   const u=db.prepare('SELECT * FROM users WHERE email=?').get(row.email) as User|undefined;
+   if(u&&u.role!=='admin')db.prepare("UPDATE users SET role='admin' WHERE id=?").run(u.id);
+   return json({ok:true,row,staffRoles:listStaffRoles()});
+  }catch(e){return error((e as Error).message);}
+ }
+
  if(route==='admin/member'){
   const id=String(b.id);
   db.prepare("UPDATE users SET club=?,club_source='manual' WHERE id=?").run(b.club?1:0,id);

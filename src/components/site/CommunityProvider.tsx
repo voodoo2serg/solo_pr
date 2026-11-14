@@ -1,7 +1,7 @@
 'use client';
 import {createContext,useContext,useEffect,useState,useCallback,type ReactNode} from 'react';
 import type {CommunityContent} from '@/lib/content-types';
-export type Member={id:string;email:string;username:string;name:string;about:string;role:string;club:boolean;theme:string;hasAvatar:boolean;externalId?:string|null;hasOidc?:boolean};
+export type Member={id:string;email:string;username:string;name:string;about:string;role:string;club:boolean;theme:string;hasAvatar:boolean;externalId?:string|null;hasOidc?:boolean;staffZones?:Partial<Record<'lms'|'cms'|'crm'|'voronka',string>>;cmsUrl?:string;};
 export type PublicContent=Omit<CommunityContent,'materials'|'events'>&{materials:Omit<CommunityContent['materials'][number],'body'>[];events:Omit<CommunityContent['events'][number],'roomUrl'|'recordingUrl'>[]};
 export async function api(path:string,data?:unknown){const res=await fetch('/api/portal/'+path,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store'});const body=await res.json();if(!res.ok)throw new Error(body.error||'Не удалось выполнить запрос');return body;}
 const Context=createContext<{content:PublicContent|null;user:Member|null;loading:boolean;error:string;refresh:()=>Promise<void>;setUser:(u:Member|null)=>void;theme:string;resolvedTheme:'light'|'dark';setTheme:(t:string)=>void}>({content:null,user:null,loading:true,error:'',refresh:async()=>{},setUser:()=>{},theme:'system',resolvedTheme:'light',setTheme:()=>{}});

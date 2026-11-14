@@ -14,5 +14,14 @@ if(!password){if(!process.stdin.isTTY){console.error('Передайте ADMIN_P
 if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||password.length<12||password.length>128){console.error('Нужен корректный email и пароль от 12 до 128 символов.');process.exit(1);}
 const db=new DatabaseSync(path.join(dir,'community.sqlite'));db.exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');const salt=randomBytes(16).toString('hex'),hash=salt+':'+scryptSync(password,salt,64).toString('hex');
 if(reset){const u=db.prepare('SELECT id FROM users WHERE email=?').get(email);if(!u){console.error('Пользователь не найден');process.exit(1);}db.prepare('UPDATE users SET password=? WHERE id=?').run(hash,u.id);db.prepare('DELETE FROM sessions WHERE user_id=?').run(u.id);console.log('Пароль обновлён, сеансы завершены.');}
-else {const existing=db.prepare('SELECT id FROM users WHERE email=?').get(email);if(existing){db.prepare("UPDATE users SET role='admin',club=1,password=? WHERE id=?").run(hash,existing.id);db.prepare('DELETE FROM sessions WHERE user_id=?').run(existing.id);}else{const username=process.env.ADMIN_USERNAME||'admin';db.prepare("INSERT INTO users(id,email,username,name,password,role,club,created,consent) VALUES(?,?,?,?,?,'admin',1,?,?)").run(randomUUID(),email,username,'Администратор',hash,new Date().toISOString(),'server-owner');}console.log('Администратор настроен. Вход: /login. Редактор: /admin.');}
+else {const existing=db.prepare('SELECT id FROM users WHERE email=?').get(email);if(existing){db.prepare("UPDATE users SET role='admin',club=1,password=? WHERE id=?").run(hash,existing.id);db.prepare('DELETE FROM sessions WHERE user_id=?').run(existing.id);}else{const username=process.env.ADMIN_USERNAME||'admin';db.prepare("INSERT INTO users(id,email,username,name,password,role,club,created,consent) VALUES(?,?,?,?,?,'admin',1,?,?)").run(randomUUID(),email,username,'Администратор',hash,new Date().toISOString(),'server-owner');}
+db.exec(`CREATE TABLE IF NOT EXISTS staff_roles(email TEXT PRIMARY KEY,name TEXT NOT NULL DEFAULT '',zones TEXT NOT NULL DEFAULT '{}',checklist TEXT NOT NULL DEFAULT '{}',updated TEXT NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`);
+const zones=JSON.stringify({cms:'admin',crm:'owner',voronka:'ops',lms:'admin'});
+const checklist=JSON.stringify({crmStaffGranted:false,openolatGranted:false,notes:'Выдано через admin.mjs — отметьте ручные гранты CRM/OL'});
+const nowIso=new Date().toISOString();
+const existingRole=db.prepare('SELECT email FROM staff_roles WHERE email=?').get(email);
+if(existingRole)db.prepare('UPDATE staff_roles SET name=?,zones=?,updated=?,updated_by=? WHERE email=?').run('Администратор',zones,nowIso,'admin.mjs',email);
+else db.prepare('INSERT INTO staff_roles(email,name,zones,checklist,updated,updated_by) VALUES(?,?,?,?,?,?)').run(email,'Администратор',zones,checklist,nowIso,'admin.mjs');
+
+console.log('Администратор настроен. Вход: /login. Редактор: /admin.');}
 db.close();

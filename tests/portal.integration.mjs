@@ -43,5 +43,23 @@ try{
  const thirdCookie=r.headers.get('set-cookie').split(';')[0];
  r=await call('admin/media',{data:'data:image/png;base64,'+cmsPhoto.toString('base64')},thirdCookie);check(r.status===403,'Member cannot upload CMS media');
  r=await call('lead',{kind:'course',contactType:'telegram',contact:'@test_user',consent:true});check(r.status===200,'Telegram inquiry without name or message');r=await call('lead',{kind:'club',contactType:'max',contact:'+79991234567',consent:true});check(r.status===200,'MAX inquiry');r=await call('lead',{kind:'course',contactType:'email',contact:'quick@example.test',consent:true});check(r.status===200,'Email inquiry without message');const lead=db.prepare("SELECT * FROM leads WHERE contact_type='telegram'").get();check(lead.message==='Информация о курсах'&&lead.contact==='@test_user'&&lead.email==='','Contact channel and automatic topic saved');
- const row=db.prepare('SELECT password FROM users WHERE id=?').get(first.id);check(!row.password.includes('testing-only'),'Password not stored in plaintext');db.close();console.log(`${count} integration checks passed. Temporary test data removed.`);
+ 
+ // SPO-20/23/26 portal CMS extensions
+ r=await call('admin/staff-roles',{email:'editor@example.test',name:'Editor',zones:{cms:'editor'},checklist:{crmStaffGranted:false,openolatGranted:false,notes:'test'}},cookie);check(r.status===200,'Staff role upsert');
+ const roles=(await body(r)).staffRoles;check(roles.some(x=>x.email==='editor@example.test'&&x.zones.cms==='editor'),'Staff role stored');
+ r=await call('admin',undefined,cookie);const adminBody=await body(r);check(Array.isArray(adminBody.staffRoles),'Admin payload includes staffRoles');check(Array.isArray(adminBody.integrations?.portals),'Integrations include portals block');check(adminBody.integrations.portals.some(p=>p.id==='cms'&&String(p.url).includes('cms.solo-pr.ru')),'CMS portal URL documented');
+ const lmsPortal=adminBody.integrations.portals.find(p=>p.id==='lms');
+ check(!!lmsPortal&&(String(lmsPortal.note||'').includes('OpenOlat')||String(lmsPortal.lastCheck?.status||'').includes('stub')),'LMS stub != healthy OpenOlat');
+ r=await call('admin/staff-roles',{email:'editor@example.test',remove:true},cookie,'https://cms.solo-pr.ru');
+ if(r.status===200){check(!(await body(r)).staffRoles.some(x=>x.email==='editor@example.test'),'Staff role removed via cms origin');}
+ else {r=await call('admin/staff-roles',{email:'editor@example.test',remove:true},cookie);check(r.status===200,'Staff role removed');}
+ // hero / material / event images survive publish
+ admin.content.home.heroImage='/images/hero-room.jpg';
+ admin.content.materials=admin.content.materials.map((m,i)=>i?m:{...m,image:'/images/hero-room.jpg'});
+ admin.content.events=admin.content.events.map(e=>({...e,image:'/images/hero-room.jpg'}));
+ admin.content.brand={...admin.content.brand,showEmail:true,showTelegram:true,showMax:false,showVk:true,vk:'https://vk.com/solo_pr'};
+ r=await call('admin/content',{content:admin.content},cookie);check(r.status===200,'CMS hero/footer/media fields save');
+ r=await call('content',undefined,cookie);const pub=await body(r);check(pub.home.heroImage==='/images/hero-room.jpg','heroImage published');check(pub.brand.showVk===true&&pub.brand.vk.includes('vk.com'),'Footer VK toggles published');
+
+const row=db.prepare('SELECT password FROM users WHERE id=?').get(first.id);check(!row.password.includes('testing-only'),'Password not stored in plaintext');db.close();console.log(`${count} integration checks passed. Temporary test data removed.`);
 }finally{rmSync(temp,{recursive:true,force:true});}
