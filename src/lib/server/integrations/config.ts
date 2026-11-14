@@ -1,5 +1,6 @@
 import 'server-only';
 import {db} from '../store';
+import {portalsStatusPublic} from '@/lib/portals';
 
 db.exec(`CREATE TABLE IF NOT EXISTS integration_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL,updated TEXT NOT NULL);`);
 
@@ -69,6 +70,8 @@ export function integrationStatusPublic(){
   const row=db.prepare('SELECT value,updated FROM integration_settings WHERE key=?').get(key) as {value:string;updated:string}|undefined;
   return row?{status:row.value,at:row.updated}:null;
  };
+ const lmsConfigured=!!(env.lmsBaseUrl&&env.lmsApiSecret);
+ const lmsEnabled=isIntegrationEnabled('lms');
  return {
   voronka:{
    enabled:isIntegrationEnabled('voronka'),
@@ -78,8 +81,8 @@ export function integrationStatusPublic(){
    lastError:last('voronka.last_error'),
   },
   lms:{
-   enabled:isIntegrationEnabled('lms'),
-   configured:!!(env.lmsBaseUrl&&env.lmsApiSecret),
+   enabled:lmsEnabled,
+   configured:lmsConfigured,
    urlMasked:maskUrl(env.lmsBaseUrl),
    lastSuccess:last('lms.last_success'),
    lastError:last('lms.last_error'),
@@ -100,5 +103,10 @@ export function integrationStatusPublic(){
    region:env.pdHostRegion,
    productionPath:'vps-ru',
   },
+  portals:portalsStatusPublic({
+   lmsConfigured,
+   lmsEnabled,
+   lmsLast:lmsConfigured?last('lms.last_success'):{status:'stub-not-openolat',at:new Date().toISOString()},
+  }),
  };
 }

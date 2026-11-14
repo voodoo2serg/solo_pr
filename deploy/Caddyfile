@@ -1,4 +1,14 @@
-{$SITE_DOMAIN} {
+# Public site + learner login (solo-pr.ru)
+{$SITE_DOMAIN:solo-pr.ru} {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3000
 }
+
+# Staff CMS (SPO-20) — same app, Host selects chrome; cookies stay host-scoped
+cms.{$SITE_DOMAIN:solo-pr.ru} {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3000
+}
+
+# CRM / Voronka / LMS are separate services — document upstreams in ops; stubs may point here until cutover
+# crm.solo-pr.ru, voronka.solo-pr.ru, lms.solo-pr.ru → configured on VPS nginx/Caddy outside this file when ready

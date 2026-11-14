@@ -68,6 +68,7 @@ function migrate(database:DatabaseSync){
  if(!userCols.some(c=>c.name==='external_id'))database.exec('ALTER TABLE users ADD COLUMN external_id TEXT');
  if(!userCols.some(c=>c.name==='oidc_sub'))database.exec('ALTER TABLE users ADD COLUMN oidc_sub TEXT');
  if(!userCols.some(c=>c.name==='club_source'))database.exec("ALTER TABLE users ADD COLUMN club_source TEXT NOT NULL DEFAULT 'manual'");
+ database.exec(`CREATE TABLE IF NOT EXISTS staff_roles(email TEXT PRIMARY KEY,name TEXT NOT NULL DEFAULT '',zones TEXT NOT NULL DEFAULT '{}',checklist TEXT NOT NULL DEFAULT '{}',updated TEXT NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`);
  const purchaseCols=database.prepare('PRAGMA table_info(purchases)').all() as {name:string}[];
  if(!purchaseCols.some(c=>c.name==='source'))database.exec("ALTER TABLE purchases ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
  if(!purchaseCols.some(c=>c.name==='event_id'))database.exec('ALTER TABLE purchases ADD COLUMN event_id TEXT');

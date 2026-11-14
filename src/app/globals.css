@@ -355,3 +355,16 @@ html.dark body,html.dark .site-wrapper,html.dark .site-header,html.dark .communi
 
 /* Three editorial cards per row; independent pagination stays on the right. */
 .feed-strip.publication-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;padding:24px 0}.publication-row .feed-article{padding:20px 12px 20px 0;border:0;min-width:0}.video-card{min-width:0}.video-card h3{font-size:18px;line-height:1.45;margin:16px 0}.video-player{aspect-ratio:16/9;background:var(--surface,#f4f4f4);border:1px solid var(--line);overflow:hidden;border-radius:12px}.video-player iframe,.video-player button{width:100%;height:100%;border:0}.video-player button{position:relative;background:transparent;cursor:pointer;color:inherit;display:grid;place-items:center}.video-player img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.video-player span{position:relative;background:var(--bg,#fff);color:var(--ink,#222);padding:10px 16px;border-radius:24px}.feed-pagination{justify-content:flex-end}.publication-actions{display:flex;gap:28px;flex-wrap:wrap;margin-top:30px}.library-types{margin:20px 0}.cms-field input[type=checkbox]{width:22px;height:22px}.cms-array-actions{display:flex;gap:16px;margin:12px 0}.cms-help{font-size:14px;line-height:1.6;margin:16px 0}.cms-field input[type=number]{max-width:160px}@media(max-width:760px){.feed-strip.publication-row{grid-template-columns:1fr}.publication-row .feed-article{border-bottom:1px solid var(--line)}.video-card h3{font-size:17px}}
+
+
+/* SPO-20/21 CMS portal chrome + sticky publish */
+.portal-chrome{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 8px}
+.portal-chrome-link{font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:8px 12px;border:1px solid var(--line);border-radius:4px;color:var(--foreground)}
+.portal-chrome-link.active,.portal-chrome-link:hover{border-color:var(--brand-brick);color:var(--brand-brick)}
+.cms-sticky-bar{display:none}
+@media(min-width:901px){
+ .cms-sticky-bar{position:sticky;bottom:16px;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:24px;padding:12px 16px;border:1px solid var(--line);background:var(--surface);border-radius:6px;box-shadow:0 8px 24px rgba(40,38,36,.08);opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .2s,transform .2s}
+ .cms-sticky-bar.is-visible{opacity:1;pointer-events:auto;transform:none}
+}
+.event-cover{margin-bottom:12px;border-radius:6px;overflow:hidden;max-height:180px}
+.event-cover img{display:block;width:100%;height:180px;object-fit:cover}

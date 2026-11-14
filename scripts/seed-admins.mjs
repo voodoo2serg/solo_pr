@@ -50,6 +50,13 @@ const names=new Set(userCols.map(c=>c.name));
 if(!names.has('external_id'))db.exec('ALTER TABLE users ADD COLUMN external_id TEXT');
 if(!names.has('oidc_sub'))db.exec('ALTER TABLE users ADD COLUMN oidc_sub TEXT');
 if(!names.has('club_source'))db.exec("ALTER TABLE users ADD COLUMN club_source TEXT NOT NULL DEFAULT 'manual'");
+db.exec(`CREATE TABLE IF NOT EXISTS staff_roles(email TEXT PRIMARY KEY,name TEXT NOT NULL DEFAULT '',zones TEXT NOT NULL DEFAULT '{}',checklist TEXT NOT NULL DEFAULT '{}',updated TEXT NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`);
+const MATRIX={
+ 'cms@vodopetov.ru':{name:'Редактор CMS',zones:{cms:'editor'}},
+ 'ops@vodopetov.ru':{name:'Операции сайта',zones:{cms:'ops',crm:'manager'}},
+ 'community@vodopetov.ru':{name:'Сообщество',zones:{cms:'ops',voronka:'support'}},
+};
+
 
 const now=new Date().toISOString();
 let created=0,updated=0;
@@ -78,6 +85,16 @@ for(const admin of ADMINS){
  created++;
  console.log('created',admin.email);
 }
+
+
+for(const [email,meta] of Object.entries(MATRIX)){
+ const zones=JSON.stringify(meta.zones);
+ const checklist=JSON.stringify({crmStaffGranted:false,openolatGranted:false,notes:'Bootstrap — отметьте ручную выдачу CRM staff / OpenOlat до авто-синка'});
+ const row=db.prepare('SELECT email FROM staff_roles WHERE email=?').get(email);
+ if(row)db.prepare('UPDATE staff_roles SET name=?,zones=?,updated=?,updated_by=? WHERE email=?').run(meta.name,zones,now,'seed-admins',email);
+ else db.prepare('INSERT INTO staff_roles(email,name,zones,checklist,updated,updated_by) VALUES(?,?,?,?,?,?)').run(email,meta.name,zones,checklist,now,'seed-admins');
+}
+console.log('seed-admins: staff matrix upserted for',Object.keys(MATRIX).join(', '));
 
 db.close();
 console.log(`Bootstrap admins ready (created=${created}, updated=${updated}). Login: /login → /admin. See docs/admin-instruction.md.`);
