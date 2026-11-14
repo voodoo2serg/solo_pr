@@ -172,4 +172,4 @@ solo_pr checkout UI (опц.) → voronka commerce API → Robokassa/YooKassa Re
 | LMS portal + meeting stubs | lms_end | OpenOlat/Keycloak compose up; BBB media |
 | Wire lead/access/enrollment/completion | все три | prod LMS_* / OIDC env |
 
-**Этот этап (5):** только документация в solo_pr. **Этап 6:** code audit. **Деплой / BBB install — отдельный проход.**
+**Этап 5:** этот документ + [BACKEND_ARCHITECTURE.md](./BACKEND_ARCHITECTURE.md). **Этап 6:** [PLATFORM_CODE_AUDIT.md](./PLATFORM_CODE_AUDIT.md). **Деплой / BBB install — отдельный проход.**
